@@ -187,7 +187,7 @@ AccessControlInfo:
 SystemControlInfo:
   SaveDataSize: 0KB # It doesn't use any save data.
   RemasterVersion: 2
-  StackSize: 0x00040000
+  StackSize: 0x00800000
   # JumpId: 0
   Dependency: 
     ac: 0x0004013000002402L
