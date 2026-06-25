@@ -38,8 +38,8 @@ APP_VERSION	:=	$(VER_MAJOR).$(VER_MINOR).$(VER_MICRO)
 
 TARGET		:=	d1x-3ds
 BUILD		:=	build
-SOURCES		:=	arch 2d 3d maths texmap misc mem arch/sdl iff libmve main
-INCLUDES	:=	include arch/include main arch/sdl
+SOURCES		:=	arch 2d 3d maths texmap misc mem arch/sdl arch/ogl iff libmve main
+INCLUDES	:=	include arch/include main arch/sdl ../libs/picaGL/include
 #EXEFS_SRC	:=	exefs_src
 
 #---------------------------------------------------------------------------------
@@ -55,7 +55,7 @@ CFLAGS	+=	$(INCLUDE) -D__3DS__ -DNDEBUG -DRELEASE -DNO_ASM -DUSE_SDLMIXER \
 			-DMAXIMUM_FPS=60 -DHAVE_STRUCT_TIMEVAL -DHAVE_STRUCT_TIMESPEC \
 			-Wno-deprecated-declarations -fno-short-enums
 
-CFLAGS  +=  $(INCLUDE) -DARM11 -D_3DS
+CFLAGS  +=  $(INCLUDE) -DARM11 -D_3DS -DOGL -DOGLES
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 
@@ -63,13 +63,13 @@ ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-flto --specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
 #LIBS	:= -lSDL_mixer -lSDL -lnx -lphysfs -lFLAC -lmikmod -lvorbisidec -logg -lm
-LIBS	:= -lphysfs -lSDL_mixer -lSDL_image -lSDL -lmikmod -lmad -lvorbisidec -logg -lpng -ljpeg -lz -lcitro3d -lctru -lm
+LIBS	:= -lphysfs -lpicaGL -lSDL_mixer -lSDL_image -lSDL -lmikmod -lmad -lvorbisidec -logg -lpng -ljpeg -lz -lcitro3d -lctru -lm
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
-LIBDIRS	:= $(CTRULIB) $(PORTLIBS)
+LIBDIRS	:= $(CTRULIB) $(PORTLIBS) $(CURDIR)/../libs/picaGL
 
 
 #---------------------------------------------------------------------------------

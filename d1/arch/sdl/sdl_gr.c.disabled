@@ -23,6 +23,7 @@ int sdl_video_flags = SDL_SWSURFACE | SDL_HWPALETTE | SDL_DOUBLEBUF;
 SDL_Surface *screen,*canvas;
 int gr_installed = 0;
 
+#ifndef OGL
 void gr_flip()
 {
 	SDL_Rect src, dest;
@@ -34,6 +35,7 @@ void gr_flip()
 	SDL_BlitSurface(canvas, &src, screen, &dest);
 	SDL_Flip(screen);
 }
+#endif
 
 // Set the buffer to draw to. 0 is front, 1 is back
 // With SDL, can't use it without resetting the video mode
@@ -183,11 +185,13 @@ int gr_init(int mode)
 	if (GameArg.SysNoBorders)
 		sdl_video_flags|=SDL_NOFRAME;
 
+#ifndef OGL
 	if (GameArg.DbgSdlHWSurface)
 		sdl_video_flags|=SDL_HWSURFACE;
 
 	if (GameArg.DbgSdlASyncBlit)
 		sdl_video_flags|=SDL_ASYNCBLIT;
+#endif
 
 	// Set the mode.
 	if ((retcode=gr_set_mode(mode)))

@@ -56,10 +56,14 @@
 #include <OpenGL/glu.h>
 #else
 #ifdef OGLES
+#ifndef __3DS__
 #include <EGL/egl.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <SDL/SDL_syswm.h>
+#else
+#include <GL/picaGL.h>
+#endif
 #else
 #include <GL/glu.h>
 #endif
@@ -83,6 +87,7 @@ int linedotscale=1; // scalar of glLinewidth and glPointSize - only calculated o
 int sdl_no_modeswitch=0;
 
 #ifdef OGLES
+#ifndef __3DS__
 EGLDisplay eglDisplay=EGL_NO_DISPLAY;
 EGLConfig eglConfig;
 EGLSurface eglSurface=EGL_NO_SURFACE;
@@ -105,10 +110,13 @@ bool TestEGLError(char* pszLocation)
 	return 1;
 }
 #endif
+#endif
 
 void ogl_swap_buffers_internal(void)
 {
-#ifdef OGLES
+#ifdef __3DS__
+	pglSwapBuffers();
+#elif defined(OGLES)
 	eglSwapBuffers(eglDisplay, eglSurface);
 #else
 	SDL_GL_SwapBuffers();
@@ -254,6 +262,7 @@ int rpi_setup_element(int x, int y, Uint32 video_flags, int update)
 #endif // RPI
 
 #ifdef OGLES
+#ifndef __3DS__
 void ogles_destroy(void)
 {
 	if( eglDisplay != EGL_NO_DISPLAY ) {
@@ -279,6 +288,7 @@ void ogles_destroy(void)
 	}
 }
 #endif
+#endif
 
 int ogl_init_window(int x, int y)
 {
@@ -286,6 +296,7 @@ int ogl_init_window(int x, int y)
 	Uint32 use_flags;
 
 #ifdef OGLES
+#ifndef __3DS__
 	SDL_SysWMinfo info;
 	Window    x11Window = 0;
 	Display*  x11Display = 0;
@@ -307,6 +318,7 @@ int ogl_init_window(int x, int y)
         EGLint winAttribs[] = { EGL_RENDER_BUFFER, EGL_BACK_BUFFER, EGL_NONE, EGL_NONE };
 
 	int iConfigs;
+#endif
 #endif // OGLES
 
 	if (gl_initialized)
@@ -342,6 +354,9 @@ int ogl_init_window(int x, int y)
 	}
 
 #ifdef OGLES
+#ifdef __3DS__
+	pglInit();
+#else
 #ifndef RPI
 	// NOTE: on the RPi, the EGL stuff is not connected to the X11 window,
 	//       so there is no need to destroy and recreate this
@@ -417,6 +432,7 @@ int ogl_init_window(int x, int y)
 		con_printf(CON_DEBUG, "EGL: made context current\n");
 	}
 #endif
+#endif
 
 	linedotscale = ((x/640<y/480?x/640:y/480)<1?1:(x/640<y/480?x/640:y/480));
 
@@ -460,7 +476,7 @@ int gr_toggle_fullscreen(void)
 	{
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
-#ifdef OGLES
+#if defined(OGLES) && !defined(__3DS__)
 		glOrthof(0.0, 1.0, 0.0, 1.0, -1.0, 1.0);
 #else
  		glOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0);
@@ -483,7 +499,7 @@ static void ogl_init_state(void)
 	/* initialize viewing values */
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-#ifdef OGLES
+#if defined(OGLES) && !defined(__3DS__)
 	glOrthof(0.0, 1.0, 0.0, 1.0, -1.0, 1.0);
 #else
  	glOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0);
@@ -805,7 +821,9 @@ void gr_close()
 #endif
 
 #ifdef OGLES
+#ifndef __3DS__
 	ogles_destroy();
+#endif
 #ifdef RPI
 	con_printf(CON_DEBUG, "RPi: cleanuing up\n");
 	if (dispman_display != DISPMANX_NO_HANDLE) {
@@ -826,7 +844,9 @@ void ogl_upixelc(int x, int y, int c)
 
 	r_upixelc++;
 	OGL_DISABLE(TEXTURE_2D);
+#ifndef __3DS__
 	glPointSize(linedotscale);
+#endif
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 	glVertexPointer(2, GL_FLOAT, 0, vertex_array);
@@ -838,7 +858,9 @@ void ogl_upixelc(int x, int y, int c)
 
 unsigned char ogl_ugpixel( grs_bitmap * bitmap, int x, int y )
 {
+#ifndef __3DS__
 	GLint gl_draw_buffer;
+#endif
 	ubyte buf[4];
 
 #ifndef OGLES

@@ -22,7 +22,7 @@ int ogl_init_load_library(void);
 # else
 #  define GL_GLEXT_PROTOTYPES
 #  ifdef OGLES
-#  include <GLES/gl.h>
+#  include <GL/picaGL.h>
 #  else
 #  include <GL/gl.h>
 #  endif
