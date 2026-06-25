@@ -16,6 +16,9 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
  *
  */
 
+int Current_obs_player = 0;
+bool Obs_at_distance = 0;
+
 #ifdef NETWORK
 
 #include <stdio.h>
@@ -156,8 +159,7 @@ const char GMNamesShrt[MULTI_GAME_TYPE_COUNT][8]={
 	"BOUNTY"
 };
 
-int Current_obs_player = OBSERVER_PLAYER_ID; // Current player being observed. Defaults to the observer player ID.
-bool Obs_at_distance = 0; // True if you're viewing the player from a cube back.
+// Removed duplicate vars
 
 // For rejoin object syncing (used here and all protocols - globally)
 
@@ -196,6 +198,8 @@ void multi_add_lifetime_kills();
 
 char *RankStrings[]={"(unpatched) ","Cadet ","Ensign ","Lieutenant ","Lt.Commander ",
                      "Commander ","Captain ","Vice Admiral ","Admiral ","Demigod "};
+int Current_obs_player;
+bool Obs_at_distance;
 
 int multi_allow_powerup_mask[MAX_POWERUP_TYPES] =
 { NETFLAG_DOINVUL, 0, 0, NETFLAG_DOLASER, 0, 0, 0, 0, 0, 0, 0, 0, NETFLAG_DOQUAD,

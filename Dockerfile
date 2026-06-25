@@ -3,14 +3,17 @@ from devkitpro/devkitarm:latest
 RUN apt-get update && apt-get install -y gcc g++ zip cmake
 
 # Install makerom
-RUN cd / && git clone https://github.com/profi200/Project_CTR
-RUN cd /Project_CTR/makerom && make
-ENV PATH="/Project_CTR/makerom/:${PATH}"
+RUN cd / && git clone --recursive https://github.com/profi200/Project_CTR
+RUN cd /Project_CTR/makerom && make deps && make
+ENV PATH="/Project_CTR/makerom/bin:${PATH}"
 
 # Install bannertool
-RUN cd / && git clone https://github.com/Steveice10/bannertool
-RUN cd /bannertool && git submodule update --init --recursive && make 
-ENV PATH="/bannertool/output/linux-x86_64/:${PATH}"
+RUN apt-get install -y wget unzip && \
+    wget https://github.com/Epicpkmn11/bannertool/releases/download/v1.2.2/bannertool.zip && \
+    unzip bannertool.zip && \
+    mv linux-x86_64/bannertool /usr/local/bin/ && \
+    chmod +x /usr/local/bin/bannertool && \
+    rm *.zip
 
 # Install PHYSFS
 RUN cd / && git clone https://github.com/RossMeikleham/physfs-3ds

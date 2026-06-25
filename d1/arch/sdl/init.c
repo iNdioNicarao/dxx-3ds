@@ -1,5 +1,9 @@
 // Holds the main init and de-init functions for arch-related program parts
 
+#ifdef __3DS__
+#include <3ds.h>
+#endif
+
 #include <SDL/SDL.h>
 #include "songs.h"
 #include "key.h"
@@ -25,7 +29,6 @@ void arch_close(void)
 
 // aagallag: TODO -- Fix bug so we can gracefully exit
 #ifdef __3DS__
-	consoleInit(NULL);
 	printf("Press the home button to exit...\n");
 	while (aptMainLoop()) 
     {

@@ -1383,7 +1383,7 @@ void kconfig_read_controls(d_event *event, int automap_flag)
 			}
 			else if(PlayerCfg.MouseControlStyle == MOUSE_CONTROL_REBIRTH)  /* Old School Mouse */
 			{
-				event_mouse_get_delta( event, &Controls.raw_mouse_axis[0], &Controls.raw_mouse_axis[1], &Controls.raw_mouse_axis[2] );
+				event_mouse_get_delta( event, (int *)&Controls.raw_mouse_axis[0], (int *)&Controls.raw_mouse_axis[1], (int *)&Controls.raw_mouse_axis[2] );
 				Controls.mouse_axis[0] = (Controls.raw_mouse_axis[0]*FrameTime)/8;
 				Controls.mouse_axis[1] = (Controls.raw_mouse_axis[1]*FrameTime)/8;
 				Controls.mouse_axis[2] = (Controls.raw_mouse_axis[2]*FrameTime);
@@ -1397,7 +1397,7 @@ void kconfig_read_controls(d_event *event, int automap_flag)
 				int impulse_factor = ((F1_0/20 / (FrameTime) - 1 ) * PlayerCfg.MouseImpulse) / 15 + 1; 
 				//int impulse_factor = 1; 
 
-				event_mouse_get_delta( event, &Controls.raw_mouse_axis[0], &Controls.raw_mouse_axis[1], &Controls.raw_mouse_axis[2] );
+				event_mouse_get_delta( event, (int *)&Controls.raw_mouse_axis[0], (int *)&Controls.raw_mouse_axis[1], (int *)&Controls.raw_mouse_axis[2] );
 				Controls.mouse_axis[0] = (Controls.raw_mouse_axis[0]*FrameTime)/8 * impulse_factor; //;// * PlayerCfg.MouseImpulse / 2;
 				Controls.mouse_axis[1] = (Controls.raw_mouse_axis[1]*FrameTime)/8 * impulse_factor;  // ;// * PlayerCfg.MouseImpulse / 2;
 				Controls.mouse_axis[2] = (Controls.raw_mouse_axis[2]*FrameTime);

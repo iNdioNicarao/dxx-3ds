@@ -58,10 +58,7 @@ typedef unsigned int uint;
 #endif
 
 #ifndef __cplusplus
-#ifndef bool
-//define a boolean
-typedef ubyte bool;
-#endif
+#include <stdbool.h>
 #endif
 
 #ifndef NULL

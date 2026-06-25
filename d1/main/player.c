@@ -11,7 +11,11 @@
 #include "byteswap.h"
 
 int RespawningConcussions[MAX_PLAYERS]; 
-
+vms_vector Last_pos;
+vms_matrix Last_orient;
+fix Last_real_update;
+vms_vector Real_pos;
+vms_matrix Real_orient;
 void player_rw_swap(player_rw *p, int swap)
 {
 	int i;
