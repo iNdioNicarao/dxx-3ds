@@ -1,0 +1,3 @@
+[submodule "libs/picaGL"]
+	path = libs/picaGL
+	url = https://github.com/masterfeizz/picaGL.git
