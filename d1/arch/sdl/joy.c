@@ -118,32 +118,13 @@ int joy_axis_handler(SDL_JoyAxisEvent *jae)
 
 	axis = SDL_Joysticks[jae->which].axis_map[jae->axis];
 
-	int val = jae->value;
-#ifdef __3DS__
-	// The 3DS Circle Pad/C-Stick native range is roughly -154 to 154.
-	// If SDL-3DS passes raw values, we must scale them up to -32768..32767.
-	// We can dynamically check: if the absolute value is within CTRU range (e.g. <= 256),
-	// we scale it up. (Multiplying by 212 maps 154 to ~32648).
-	// If the absolute value is > 256, it's already scaled by the SDL library.
-	static int is_unscaled[JOY_MAX_AXES] = {0};
-	if (abs(val) > 256) {
-		is_unscaled[axis] = 2; // confirmed scaled
-	} else if (abs(val) > 0 && is_unscaled[axis] == 0) {
-		is_unscaled[axis] = 1; // likely unscaled
-	}
-	
-	if (is_unscaled[axis] == 1) {
-		val = val * 212;
-	}
-#endif
-
 	// inaccurate stick is inaccurate. SDL might send SDL_JoyAxisEvent even if the value is the same as before.
-	if (Joystick.axis_value[axis] == val/256)
+	if (Joystick.axis_value[axis] == jae->value/256)
 		return 0;
 
 	event.type = EVENT_JOYSTICK_MOVED;
 	event.axis = axis;
-	event.value = Joystick.axis_value[axis] = val/256;
+	event.value = Joystick.axis_value[axis] = jae->value/256;
 	con_printf(CON_DEBUG, "Sending event EVENT_JOYSTICK_MOVED, axis: %d, value: %d\n",event.axis, event.value);
 	event_send((d_event *)&event);
 
