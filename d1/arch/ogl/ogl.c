@@ -1278,6 +1278,9 @@ void gr_flip(void)
 
 int tex_format_supported(int iformat,int format)
 {
+#ifdef __3DS__
+	// Not supported by picaGL anyway, but macros don't exist
+#endif
 #ifndef OGLES
 	switch (iformat){
 		case GL_INTENSITY4:
@@ -1472,11 +1475,20 @@ int tex_format_verify(ogl_texture *tex){
 		glmprintf((0,"tex format %x not supported",tex->internalformat));
 		switch (tex->internalformat){
 #ifdef OGLES
+#ifndef __3DS__
+			case GL_INTENSITY4:
+			case GL_LUMINANCE4_ALPHA4:
+			case GL_RGBA2:
+				tex->internalformat = GL_RGBA;
+				tex->format=GL_RGBA;
+				break;
+#endif
 			case GL_RGB:
 				tex->format=GL_RGB;
 				break;
 			case GL_RGBA:
 				tex->format=GL_RGBA;
+				break;
 #else
 			case GL_INTENSITY4:
 				if (GameArg.DbgGlLuminance4Alpha4Ok){

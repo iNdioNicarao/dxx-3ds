@@ -999,17 +999,21 @@ int game_handler(window *wind, d_event *event, void *data)
 		case EVENT_WINDOW_DRAW:
 			if (!time_paused)
 			{
+				con_printf(CON_NORMAL, "DEBUG: GAMEPLAY DRAW before GameProcessFrame\n");
 				calc_frame_time();
 				GameProcessFrame();
+				con_printf(CON_NORMAL, "DEBUG: GAMEPLAY DRAW after GameProcessFrame\n");
 			}
 
-			if (!Automap_active)		// efficiency hack
+			if (!Automap_active)			// efficiency hack
 			{
-				if (force_cockpit_redraw) {			//screen need redrawing?
+				if (force_cockpit_redraw) {		//screen need redrawing?
 					init_cockpit();
 					force_cockpit_redraw=0;
 				}
+				con_printf(CON_NORMAL, "DEBUG: GAMEPLAY DRAW before game_render_frame\n");
 				game_render_frame();
+				con_printf(CON_NORMAL, "DEBUG: GAMEPLAY DRAW after game_render_frame\n");
 			}
 			break;
 

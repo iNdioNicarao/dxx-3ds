@@ -210,7 +210,7 @@ void gr_ubitmap( int x, int y, grs_bitmap *bm )
 			return;
 		}
 	} else  {
-		gr_ubitmapGENERIC(x, y, bm);
+		gr_ubitmapGENERIC( x, y, bm );
 	}
 }
 
@@ -240,7 +240,7 @@ void gr_ubitmapm( int x, int y, grs_bitmap *bm )
 			return;
 		}
 	} else  {
-		gr_ubitmapGENERICm(x, y, bm);
+		gr_ubitmapGENERICm( x, y, bm );
 	}
 }
 
@@ -385,24 +385,18 @@ void gr_bitmap( int x, int y, grs_bitmap *bm )
 {
 	int dx1=x, dx2=x+bm->bm_w-1;
 	int dy1=y, dy2=y+bm->bm_h-1;
-#ifndef OGL
 	int sx=0, sy=0;
-#endif
 
 	if ((dx1 >= grd_curcanv->cv_bitmap.bm_w ) || (dx2 < 0)) return;
 	if ((dy1 >= grd_curcanv->cv_bitmap.bm_h) || (dy2 < 0)) return;
 	if ( dx1 < 0 )
 	{
-#ifndef OGL
 		sx = -dx1;
-#endif
 		dx1 = 0;
 	}
 	if ( dy1 < 0 )
 	{
-#ifndef OGL
 		sy = -dy1;
-#endif
 		dy1 = 0;
 	}
 	if ( dx2 >= grd_curcanv->cv_bitmap.bm_w )	{ dx2 = grd_curcanv->cv_bitmap.bm_w-1; }
@@ -681,4 +675,5 @@ void gr_bitblt_find_transparent_area(grs_bitmap *bm, int *minx, int *miny, int *
 		}
 	}
 	Assert (count);
+	(void)count;
 }

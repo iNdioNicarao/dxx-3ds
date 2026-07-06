@@ -1,0 +1,15 @@
+--- d1/main/inferno.c
++++ d1/main/inferno.c
+@@ -334,6 +334,12 @@
+ 
+ 	PHYSFSX_listSearchPathContent();
+ 	
++#ifdef __3DS__
++	gfxInitDefault();
++	consoleInit(GFX_TOP, &topScreen);
++	consoleSelect(&topScreen);
++#endif
++
+ 	if (!PHYSFSX_checkSupportedArchiveTypes())
+ 		Error("Required archive type not found\n");
+ 

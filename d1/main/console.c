@@ -59,10 +59,6 @@ void con_printf(int priority, const char *fmt, ...)
 	va_list arglist;
 	char buffer[CON_LINE_LENGTH];
 
-#ifdef __3DS__
-    consoleSelect(&bottomScreen);
-#endif
-
 	memset(buffer,'\0',CON_LINE_LENGTH);
 
 	if (priority <= ((int)GameArg.DbgVerbose))
@@ -112,15 +108,17 @@ void con_printf(int priority, const char *fmt, ...)
 			}
 #endif
 			PHYSFSX_printf(gamelog_fp,"%s",buffer);
+            PHYSFS_flush(gamelog_fp); // ALWAYS FLUSH SO WE DON'T LOSE LOGS
         }
 	}
-#ifdef __3DS__
-    consoleSelect(&topScreen);
-#endif
 }
 
 static void con_draw(void)
 {
+#ifdef __3DS__
+	return;
+#endif
+
 	int i = 0, y = 0, done = 0;
 
 	if (con_size <= 0)

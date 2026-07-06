@@ -301,11 +301,11 @@ int main(int argc, char *argv[])
 
 #ifdef __3DS__
     mcuHwcInit();
+	hidInit();
     gfxInitDefault();
-
-    consoleInit(GFX_TOP, &topScreen);
-    consoleInit(GFX_BOTTOM, &bottomScreen);
-    consoleSelect(&topScreen);
+	gfxSetScreenFormat(GFX_BOTTOM, GSP_RGB565_OES);
+	gfxSetDoubleBuffering(GFX_BOTTOM, false);
+	consoleInit(GFX_BOTTOM, &bottomScreen);
 
 	osSetSpeedupEnable(1); // Should get away with removing this
 #endif
@@ -323,6 +323,10 @@ int main(int argc, char *argv[])
 	freopen( "CON", "w", stdout );
 	freopen( "CON", "w", stderr );
 #endif
+#ifdef __3DS__
+	printf("\nStep 1: Console and libs initialized\n");
+	svcSleepThread(2000000000LL);
+#endif
 
 	if (GameArg.SysShowCmdHelp) {
 		print_commandline_help();
@@ -330,7 +334,7 @@ int main(int argc, char *argv[])
 		return(0);
 	}
 
-	printf("\nType %s -help' for a list of command-line options.\n\n", PROGNAME);
+	printf("\nType %s -help' for a list of command-line options.\n\n", "d1x-3ds");
 
 	PHYSFSX_listSearchPathContent();
 	
@@ -383,14 +387,28 @@ int main(int argc, char *argv[])
 
 	ReadConfigFile();
 
+#ifdef __3DS__
+	GameCfg.ResolutionX = 400;
+	GameCfg.ResolutionY = 240;
+	Game_screen_mode = SM(GameCfg.ResolutionX, GameCfg.ResolutionY);
+#endif
+
 	PHYSFSX_addArchiveContent();
 
 	arch_init();
+#ifdef __3DS__
+	printf("Step 2: arch_init finished\n");
+	svcSleepThread(2000000000LL);
+#endif
 
 	select_tmap(GameArg.DbgTexMap);
 
 	con_printf(CON_VERBOSE, "Going into graphics mode...\n");
 	gr_set_mode(Game_screen_mode);
+#ifdef __3DS__
+	printf("Step 3: gr_set_mode finished\n");
+	svcSleepThread(2000000000LL);
+#endif
 
 	// Load the palette stuff. Returns non-zero if error.
 	con_printf(CON_DEBUG, "Initializing palette system...\n" );
@@ -398,10 +416,18 @@ int main(int argc, char *argv[])
 
 	con_printf(CON_DEBUG, "Initializing font system...\n" );
 	gamefont_init();	// must load after palette data loaded.
+#ifdef __3DS__
+	printf("Step 4: gamefont_init finished\n");
+	svcSleepThread(2000000000LL);
+#endif
 
 	set_default_handler(standard_handler);
 
 	show_titles();
+#ifdef __3DS__
+	printf("Step 5: show_titles finished\n");
+	svcSleepThread(2000000000LL);
+#endif
 
 	set_screen_mode(SCREEN_MENU);
 

@@ -26,6 +26,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #endif
+#ifdef __3DS__
+#include <3ds.h>
+#endif
 
 #include <errno.h>
 #include <SDL/SDL.h>
@@ -70,7 +73,7 @@
 #endif
 
 #ifdef OGLES
-int sdl_video_flags = 0;
+int sdl_video_flags = SDL_SWSURFACE;
 
 #ifdef RPI
 static EGL_DISPMANX_WINDOW_T nativewindow;
@@ -84,8 +87,11 @@ int sdl_video_flags = SDL_OPENGL;
 int gr_installed = 0;
 int gl_initialized=0;
 int linedotscale=1; // scalar of glLinewidth and glPointSize - only calculated once when resolution changes
+#ifdef __3DS__
+int sdl_no_modeswitch=1;
+#else
 int sdl_no_modeswitch=0;
-
+#endif
 #ifdef OGLES
 #ifndef __3DS__
 EGLDisplay eglDisplay=EGL_NO_DISPLAY;
@@ -324,8 +330,10 @@ int ogl_init_window(int x, int y)
 	if (gl_initialized)
 		ogl_smash_texture_list_internal();//if we are or were fullscreen, changing vid mode will invalidate current textures
 
+#ifndef __3DS__
 	SDL_WM_SetCaption(DESCENT_VERSION, "Descent");
 	SDL_WM_SetIcon( SDL_LoadBMP( "d1x-rebirth.bmp" ), NULL );
+#endif
 
 	use_x=x;
 	use_y=y;
@@ -343,15 +351,17 @@ int ogl_init_window(int x, int y)
 		}
 	}
 
+#if !defined(__3DS__)
 	if (!SDL_SetVideoMode(use_x, use_y, use_bpp, use_flags))
 	{
-#ifdef RPI
-		con_printf(CON_URGENT, "Could not set %dx%dx%d opengl video mode: %s\n (Ignored for RPI)",
+#if defined(RPI)
+		con_printf(CON_URGENT, "Could not set %dx%dx%d opengl video mode: %s\n (Ignored)",
 			    x, y, GameArg.DbgBpp, SDL_GetError());
 #else
 		Error("Could not set %dx%dx%d opengl video mode: %s\n", x, y, GameArg.DbgBpp, SDL_GetError());
 #endif
 	}
+#endif
 
 #ifdef OGLES
 #ifdef __3DS__

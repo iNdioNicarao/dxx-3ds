@@ -38,10 +38,10 @@ static keyboard key_data;
 /* For some reason SDL keymappings aren't set by default */
 static const SDLKey keycodes_3ds[32] = 
 {
-    SDLK_a,
-    SDLK_b,
-    SDLK_ESCAPE,
     SDLK_RETURN,
+    SDLK_ESCAPE,
+    SDLK_BACKSPACE,
+    SDLK_SPACE,
     SDLK_RIGHT,
     SDLK_LEFT,
     SDLK_UP,
@@ -76,7 +76,7 @@ static const SDLKey keycodes_3ds[32] =
 #ifdef __3DS__
 const key_props key_properties[256] = {
 { "",       255,    -1                 }, // 0
-{ "ESC",    255,    DS_KEY_SELECT        },
+{ "ESC",    255,    SDLK_ESCAPE        },
 { "1",      '1',    SDLK_1             },
 { "2",      '2',    SDLK_2             },
 { "3",      '3',    SDLK_3             },
@@ -91,9 +91,9 @@ const key_props key_properties[256] = {
 { "=",      '=',    SDLK_EQUALS        },
 { "BSPC",   255,    SDLK_BACKSPACE     },
 { "TAB",    255,    SDLK_TAB           },
-{ "Q",      'q',    DS_KEY_LEFT             },
+{ "Q",      'q',    SDLK_LEFT             },
 { "W",      'w',    SDLK_w             },
-{ "E",      'e',    DS_KEY_RIGHT             },
+{ "E",      'e',    SDLK_RIGHT             },
 { "R",      'r',    SDLK_r             },
 { "T",      't',    SDLK_t             }, // 20
 { "Y",      'y',    SDLK_y             },
@@ -103,9 +103,9 @@ const key_props key_properties[256] = {
 { "P",      'p',    SDLK_p             },
 { "[",      '[',    SDLK_LEFTBRACKET   },
 { "]",      ']',    SDLK_RIGHTBRACKET  },
-{ "ENTER",  255,    DS_KEY_START       },
-{ "LCTRL",  255,    DS_KEY_A           },
-{ "A",      'a',    DS_KEY_R          }, // 30
+{ "ENTER",  255,    SDLK_RETURN       },
+{ "LCTRL",  255,    SDLK_a           },
+{ "A",      'a',    SDLK_r          }, // 30
 { "S",      's',    SDLK_s             },
 { "D",      'd',    SDLK_d             },
 { "F",      'f',    SDLK_f             },
@@ -119,7 +119,7 @@ const key_props key_properties[256] = {
 { "`",      '`',    SDLK_BACKQUOTE     },
 { "LSHFT",  255,    SDLK_LSHIFT        },
 { "\\",     '\\',   SDLK_BACKSLASH     },
-{ "Z",      'z',    DS_KEY_L          },
+{ "Z",      'z',    SDLK_l          },
 { "X",      'x',    SDLK_x             },
 { "C",      'c',    SDLK_c             },
 { "V",      'v',    SDLK_v             },
@@ -132,7 +132,7 @@ const key_props key_properties[256] = {
 { "RSHFT",  255,    SDLK_RSHIFT        },
 { "PAD*",   '*',    SDLK_KP_MULTIPLY   },
 { "LALT",   255,    SDLK_LALT          },
-{ "SPC",    ' ',    DS_KEY_B           },
+{ "SPC",    ' ',    SDLK_b           },
 { "CPSLK",  255,    SDLK_CAPSLOCK      },
 { "F1",     255,    SDLK_F1            },
 { "F2",     255,    SDLK_F2            }, // 60
@@ -275,7 +275,7 @@ const key_props key_properties[256] = {
 { "",       255,    -1                 },
 { "",       255,    -1                 },
 { "HOME",   255,    SDLK_HOME          },
-{ "UP",     255,    DS_KEY_UP          }, // 200
+{ "UP",     255,    SDLK_UP          }, // 200
 { "PGUP",   255,    SDLK_PAGEUP        },
 { "",       255,    -1                 },
 { "LEFT",   255,    SDLK_UNKNOWN        },
@@ -283,7 +283,7 @@ const key_props key_properties[256] = {
 { "RIGHT",  255,    SDLK_UNKNOWN       },
 { "",       255,    -1                 },
 { "END",    255,    SDLK_END           },
-{ "DOWN",   255,    DS_KEY_DOWN        },
+{ "DOWN",   255,    SDLK_DOWN        },
 { "PGDN",   255,    SDLK_PAGEDOWN      },
 { "INS",    255,    SDLK_INSERT        }, // 210
 { "DEL",    255,    SDLK_DELETE        },
@@ -660,9 +660,12 @@ void key_handler(SDL_KeyboardEvent *kevent)
     #ifdef __3DS__
     // Analogue stick directions seems to activate keys 28-31 and cause
     // some weird issues, throw these away, dealt with by the JOYSTICK handler
-    if (kevent->keysym.scancode < 28) {
+    con_printf(CON_URGENT, "KEY_EVENT: scancode=%d, sym=%d\n", kevent->keysym.scancode, kevent->keysym.sym);
+    if (kevent->keysym.scancode < 32) {
         event_keysym = keycodes_3ds[kevent->keysym.scancode];
+        con_printf(CON_URGENT, "Mapped to 3DS key: %d\n", event_keysym);
     } else {
+        con_printf(CON_URGENT, "Ignored scancode %d\n", kevent->keysym.scancode);
         return;
     }
     #else

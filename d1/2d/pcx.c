@@ -25,6 +25,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "u_mem.h"
 #include "pcx.h"
 #include "physfsx.h"
+#include "console.h"
 
 
 int pcx_encode_byte(ubyte byt, ubyte cnt, PHYSFS_file *fid);
@@ -188,15 +189,21 @@ int pcx_read_bitmap( char * filename, grs_bitmap * bmp,int bitmap_type ,ubyte * 
 	int i, row, col, count, xsize, ysize;
 	ubyte data, *pixdata;
 
+	con_printf(CON_NORMAL, "DEBUG: pcx_read_bitmap opening file...\n");
+
 	PCXfile = PHYSFSX_openReadBuffered( filename );
 	if ( !PCXfile )
 		return PCX_ERROR_OPENING;
+
+	con_printf(CON_NORMAL, "DEBUG: pcx_read_bitmap reading header...\n");
 
 	// read 128 char PCX header
 	if (PCXHeader_read_n( &header, 1, PCXfile )!=1) {
 		PHYSFS_close( PCXfile );
 		return PCX_ERROR_NO_HEADER;
 	}
+
+	con_printf(CON_NORMAL, "DEBUG: pcx_read_bitmap validating header...\n");
 
 	// Is it a 256 color PCX file?
 	if ((header.Manufacturer != 10)||(header.Encoding != 1)||(header.Nplanes != 1)||(header.BitsPerPixel != 8)||(header.Version != 5))	{
@@ -208,11 +215,15 @@ int pcx_read_bitmap( char * filename, grs_bitmap * bmp,int bitmap_type ,ubyte * 
 	xsize = header.Xmax - header.Xmin + 1;
 	ysize = header.Ymax - header.Ymin + 1;
 
+	con_printf(CON_NORMAL, "DEBUG: pcx_read_bitmap size is %dx%d\n", xsize, ysize);
+
 	if ( bitmap_type == BM_LINEAR )	{
 		if ( bmp->bm_data == NULL )	{
 			gr_init_bitmap_alloc (bmp, bitmap_type, 0, 0, xsize, ysize, xsize);
 		}
 	}
+
+	con_printf(CON_NORMAL, "DEBUG: pcx_read_bitmap reading data...\n");
 
 	if ( bmp->bm_type == BM_LINEAR )	{
 		for (row=0; row< ysize ; row++)      {

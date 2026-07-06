@@ -426,7 +426,7 @@ int gr_internal_string0m(int x, int y, const char *s )
 	return 0;
 }
 
-#ifndef OGL
+#if !defined(OGL)
 //a bitmap for the character
 grs_bitmap char_bm = {
 				0,0,0,0,		//x,y,w,h
@@ -499,7 +499,7 @@ int gr_internal_color_string(int x, int y, const char *s )
 	return 0;
 }
 
-#else //OGL
+#elif defined(OGL)
 
 int get_font_total_width(grs_font * font){
 	if (font->ft_flags & FT_PROPORTIONAL){
@@ -752,11 +752,17 @@ int ogl_internal_string(int x, int y, const char *s )
 			else
 				ft_w = grd_curcanv->cv_font->ft_w;
 
-			if (grd_curcanv->cv_font->ft_flags&FT_COLOR)
+			if (grd_curcanv->cv_font->ft_flags&FT_COLOR) {
+#if defined(OGL)
 				ogl_ubitmapm_cs(xx,yy,FONTSCALE_X(ft_w),FONTSCALE_Y(grd_curcanv->cv_font->ft_h),&grd_curcanv->cv_font->ft_bitmaps[letter],-1,F1_0);
+#endif
+			}
 			else{
-				if (grd_curcanv->cv_bitmap.bm_type==BM_OGL)
+				if (grd_curcanv->cv_bitmap.bm_type==BM_OGL) {
+#if defined(OGL)
 					ogl_ubitmapm_cs(xx,yy,ft_w*(FONTSCALE_X(grd_curcanv->cv_font->ft_w)/grd_curcanv->cv_font->ft_w),FONTSCALE_Y(grd_curcanv->cv_font->ft_h),&grd_curcanv->cv_font->ft_bitmaps[letter],grd_curcanv->cv_font_fg_color,F1_0);
+#endif
+				}
 				else
 					Error("ogl_internal_string: non-color string to non-ogl dest\n");
 			}
@@ -813,7 +819,7 @@ int gr_string(int x, int y, const char *s )
 	}
 
 	// Partially clipped...
-#ifdef OGL
+#if defined(OGL)
 	if (TYPE==BM_OGL)
 		return ogl_internal_string(x,y,s);
 #endif
@@ -829,7 +835,7 @@ int gr_string(int x, int y, const char *s )
 
 int gr_ustring(int x, int y, const char *s )
 {
-#ifdef OGL
+#if defined(OGL)
 	if (TYPE==BM_OGL)
 		return ogl_internal_string(x,y,s);
 #endif
@@ -854,7 +860,6 @@ int gr_ustring(int x, int y, const char *s )
 
 void gr_get_string_size(const char *s, int *string_width, int *string_height, int *average_width )
 {
-	int i = 0;
 	float width=0.0,spacing=0.0,longest_width=0.0,string_width_f=0.0,string_height_f=0.0;
 
 	if (grd_curcanv->cv_font == 0)
@@ -886,7 +891,6 @@ void gr_get_string_size(const char *s, int *string_width, int *string_height, in
 			if (string_width_f > longest_width)
 				longest_width = string_width_f;
 
-			i++;
 			s++;
 		}
 	}
@@ -935,10 +939,14 @@ void gr_close_font( grs_font * font )
 
 		if ( font->ft_chars )
 			d_free( font->ft_chars );
-#ifdef OGL
+#if defined(OGL)
 		if (font->ft_bitmaps)
 			d_free( font->ft_bitmaps );
-		gr_free_bitmap_data(&font->ft_parent_bitmap);
+		{
+			grs_bitmap tmp = font->ft_parent_bitmap;
+			gr_free_bitmap_data(&tmp);
+			font->ft_parent_bitmap = tmp;
+		}
 #endif
 		d_free( font );
 	}
@@ -1072,9 +1080,7 @@ grs_font * gr_init_font( const char * fontname )
 	if (grd_curcanv->cv_font == NULL)
 		Error("grd_curcanv->cv_font was set to an invalid font...\n");
 
-#ifdef OGL
 	ogl_init_font(font);
-#endif
 
 	return font;
 	

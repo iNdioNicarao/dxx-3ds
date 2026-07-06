@@ -949,6 +949,15 @@ void bm_read_robot_ai(int skip)
 	Num_robot_ais++;
 
 	get4fix(robptr->field_of_view);
+	{
+		fix fov_buf[NDL];
+		int i;
+		for (i = 0; i < NDL; i++)
+			fov_buf[i] = robptr->field_of_view[i];
+		adjust_field_of_view(fov_buf);
+		for (i = 0; i < NDL; i++)
+			robptr->field_of_view[i] = fov_buf[i];
+	}
 	get4fix(robptr->firing_wait);
 	get4byte(robptr->rapidfire_count);
 	get4fix(robptr->turn_time);
@@ -962,7 +971,9 @@ void bm_read_robot_ai(int skip)
 
 	robptr->always_0xabcd	= 0xabcd;
 
-	adjust_field_of_view(robptr->field_of_view);
+	// adjust_field_of_view already applied via aligned fov_buf above; raw robptr->field_of_view
+	// can be unaligned inside packed robot_info on ARM11 and causes data abort on VFP load/store
+	//adjust_field_of_view(robptr->field_of_view);
 
 }
 

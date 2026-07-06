@@ -694,7 +694,7 @@ static void show_animated_bitmap(briefing *br)
 			bi = piggy_find_bitmap(br->bitmap_name);
 			bitmap_ptr = &GameBitmaps[bi.index];
 			PIGGY_PAGE_IN( bi );
-#ifdef OGL
+#if defined(OGL) && !defined(__3DS__)
 			ogl_ubitmapm_cs(rescale_x(220), rescale_y(45),bitmap_ptr->bm_w*scale,bitmap_ptr->bm_h*scale,bitmap_ptr,255,F1_0);
 #else
 			gr_bitmapm(rescale_x(220), rescale_y(45), bitmap_ptr);
@@ -761,7 +761,7 @@ static void show_animated_bitmap(briefing *br)
 		bi = piggy_find_bitmap(br->bitmap_name);
 		bitmap_ptr = &GameBitmaps[bi.index];
 		PIGGY_PAGE_IN( bi );
-#ifdef OGL
+#if defined(OGL) && !defined(__3DS__)
 		ogl_ubitmapm_cs(0,0,bitmap_ptr->bm_w*scale,bitmap_ptr->bm_h*scale,bitmap_ptr,255,F1_0);
 #else
 		gr_bitmapm(0, 0, bitmap_ptr);
@@ -797,7 +797,7 @@ static void show_briefing_bitmap(grs_bitmap *bmp)
 	curcanv_save = grd_curcanv;
 	gr_set_current_canvas(bitmap_canv);
 
-#ifdef OGL
+#if defined(OGL) && !defined(__3DS__)
 	if (((float)SWIDTH/(HIRESMODE ? 640 : 320)) < ((float)SHEIGHT/(HIRESMODE ? 480 : 200)))
 		scale = ((float)SWIDTH/(HIRESMODE ? 640 : 320));
 	else

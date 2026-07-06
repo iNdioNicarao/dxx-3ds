@@ -29,10 +29,10 @@ include $(DEVKITARM)/3ds_rules
 #---------------------------------------------------------------------------------
 APP_TITLE		:= D1X 3DS
 APP_DESCRIPTION := Port of DXX-Switch to 3DS (Switch port by aagallag)
-APP_AUTHOR		:= Ross Meikleham
-VER_MAJOR	:=	0
-VER_MINOR	:=	58
-VER_MICRO	:=	6
+APP_AUTHOR		:= El iNdioNicarao
+VER_MAJOR	:=	1
+VER_MINOR	:=	6
+VER_MICRO	:=	5
 APP_VERSION	:=	$(VER_MAJOR).$(VER_MINOR).$(VER_MICRO)
 
 
@@ -50,12 +50,12 @@ ARCH	:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 CFLAGS	:=	-g -Wall -O2 -ffunction-sections \
 			$(ARCH) $(DEFINES)
 
-CFLAGS	+=	$(INCLUDE) -D__3DS__ -DNDEBUG -DRELEASE -DNO_ASM -DUSE_SDLMIXER \
+CFLAGS += -fsigned-char	$(INCLUDE) -D__3DS__ -DNDEBUG -DRELEASE -DNO_ASM -DUSE_SDLMIXER \
 			-DDXX_VERSION_MAJORi=$(VER_MAJOR) -DDXX_VERSION_MINORi=$(VER_MINOR) -DDXX_VERSION_MICROi=$(VER_MICRO) \
 			-DMAXIMUM_FPS=60 -DHAVE_STRUCT_TIMEVAL -DHAVE_STRUCT_TIMESPEC \
 			-Wno-deprecated-declarations -fno-short-enums
 
-CFLAGS  +=  $(INCLUDE) -DARM11 -D_3DS -DOGL -DOGLES
+CFLAGS += -fsigned-char  $(INCLUDE) -DARM11 -D_3DS -DOGL -DOGLES
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 

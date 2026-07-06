@@ -80,9 +80,15 @@ void Error(const char *fmt,...)
 	print_exit_message(exit_message);
 
 #ifdef __3DS__
-	printf("Press the home button to exit...\n");
+	printf("\n\n%s\n", exit_message);
+	printf("Press the START button or HOME to exit...\n");
 	while (aptMainLoop()) {
-		svcSleepThread(1000UL * 1000UL * 100UL);
+		gspWaitForVBlank();
+		hidScanInput();
+		u32 kDown = hidKeysDown();
+		if (kDown & KEY_START) break;
+		gfxFlushBuffers();
+		gfxSwapBuffers();
     }
 #endif
 	exit(1);

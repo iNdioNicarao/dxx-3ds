@@ -50,7 +50,11 @@ void arch_init(void)
 {
 	int t;
 
-	if (SDL_Init(SDL_INIT_VIDEO) < 0)
+#ifndef __3DS__
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
+#else
+	if (SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_AUDIO | SDL_INIT_TIMER) < 0)
+#endif
 		Error("SDL library initialisation failed: %s.",SDL_GetError());
 
 	key_init();

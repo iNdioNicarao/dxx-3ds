@@ -43,7 +43,9 @@ void mouse_init(void)
 
 void mouse_close(void)
 {
+#ifndef __3DS__
 	SDL_ShowCursor(SDL_ENABLE);
+#endif
 }
 
 void mouse_button_handler(SDL_MouseButtonEvent *mbe)
@@ -239,13 +241,16 @@ int mouse_get_btns()
 void mouse_toggle_cursor(int activate)
 {
 	Mouse.cursor_enabled = (activate && !GameArg.CtlNoMouse && !GameArg.CtlNoCursor);
+#ifndef __3DS__
 	if (!Mouse.cursor_enabled)
 		SDL_ShowCursor(SDL_DISABLE);
+#endif
 }
 
 // If we want to display/hide cursor, do so if not already and also hide it automatically after some time.
 void mouse_cursor_autohide()
 {
+#ifndef __3DS__
 	int show = SDL_ShowCursor(SDL_QUERY);
 	static fix64 hidden_time = 0;
 
@@ -264,4 +269,5 @@ void mouse_cursor_autohide()
 		if (show)
 			SDL_ShowCursor(SDL_DISABLE);
 	}
+#endif
 }

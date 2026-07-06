@@ -998,7 +998,7 @@ static inline const char *SECONDARY_WEAPON_NAMES_VERY_SHORT(const unsigned u)
 void show_bomb_count(int x,int y,int bg_color,int always_show,int right_align)
 {
 	int bomb,count,w=0,h=0,aw=0;
-	char txt[5],*t;
+	char txt[64],*t;
 
 	if (!PlayerCfg.BombGauge)
 		return;
@@ -1029,7 +1029,7 @@ void show_bomb_count(int x,int y,int bg_color,int always_show,int right_align)
 
 void hud_show_weapons_mode(int type,int vertical,int x,int y){
 	int i,w,h,aw;
-	char weapon_str[10];
+	char weapon_str[64];
 	if (vertical){
 		y=y+(LINE_SPACING*4);
 	}

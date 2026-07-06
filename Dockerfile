@@ -28,9 +28,10 @@ RUN cd physfs-3ds && mkdir build && cd build &&\
 RUN mkdir /dxx/
 ADD  d1 /dxx/d1/
 ADD  d2 /dxx/d2/
+ADD  libs /dxx/libs/
 WORKDIR /dxx/
 
-CMD cd d1 && make && cp d1x-3ds.3dsx /mnt &&\ 
+CMD cd libs/picaGL && make && cd ../../d1 && make && cp d1x-3ds.3dsx /mnt &&\ 
     cd 3ds_data && ./make_cia.sh && cp d1x-3ds.cia /mnt &&\
     cd ../../d2 && make && cp d2x-3ds.3dsx /mnt &&\
     cd 3ds_data && ./make_cia.sh && cp d2x-3ds.cia /mnt

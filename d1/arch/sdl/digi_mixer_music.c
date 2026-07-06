@@ -108,19 +108,27 @@ int mix_play_file(char *filename, int loop, void (*hook_finished_track)())
         // failing that attempt to load the sound file from the mp3 folder
         #define NEW_PATH_BUFSIZE 0x100
 	    char new_path_buffer[NEW_PATH_BUFSIZE + 1];
-        if (!d_stricmp(fptr, ".hmp")) 
+        
+        char *fptr = strrchr(filename, '.');
+        char basename[NEW_PATH_BUFSIZE + 1] = {0};
+        
+        // Extract base name without path and extension
+        char *slash = strrchr(filename, '/');
+        if (!slash) slash = strrchr(filename, '\\');
+        if (!slash) slash = (char *)filename; else slash++;
+        
+        strncpy(basename, slash, NEW_PATH_BUFSIZE);
+        char *ext = strrchr(basename, '.');
+        if (ext) *ext = '\0';
+        
+        if (fptr && !d_stricmp(fptr, ".hmp")) 
         {
-            strcpy(new_path_buffer, "/wav/");
-            strcpy(fptr, ".wav");
-            strncat(new_path_buffer, filename, NEW_PATH_BUFSIZE);
+            snprintf(new_path_buffer, NEW_PATH_BUFSIZE, "wav/%s.wav", basename);
             return mix_play_file(new_path_buffer, loop, hook_finished_track);
-            
         }
-        else if (!d_stricmp(fptr, ".wav")) 
+        else if (fptr && !d_stricmp(fptr, ".wav")) 
         {
-            strcpy(new_path_buffer, "../mp3/");
-            strcpy(fptr, ".mp3");
-            strncat(new_path_buffer, filename, NEW_PATH_BUFSIZE);
+            snprintf(new_path_buffer, NEW_PATH_BUFSIZE, "mp3/%s.mp3", basename);
             return mix_play_file(new_path_buffer, loop, hook_finished_track);
         }
 #endif

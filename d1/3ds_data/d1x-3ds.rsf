@@ -85,6 +85,9 @@ AccessControlInfo:
   
   CoreVersion                   : 2
   DescVersion                   : 2
+  SystemModeExt                 : 124MB
+  CpuSpeed                      : 804MHz
+  EnableL2Cache                 : true
   
   ReleaseKernelMajor            : "02"
   ReleaseKernelMinor            : "33" 

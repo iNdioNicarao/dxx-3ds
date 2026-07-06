@@ -6,6 +6,10 @@
  */
 
 #include <stdio.h>
+#ifdef __3DS__
+#include <3ds.h>
+#endif
+#include "console.h"
 #include <stdlib.h>
 #include "event.h"
 #include "key.h"
@@ -32,8 +36,41 @@ void event_poll()
 	
 	// If the front window changes, exit this loop, otherwise unintended behavior can occur
 	// like pressing 'Return' really fast at 'Difficulty Level' causing multiple games to be started
+#ifdef __3DS__
+	static u32 old_keys = 0;
+	hidScanInput();
+	u32 current_keys = hidKeysHeld();
+	u32 kDown = current_keys & ~old_keys;
+	u32 kUp = ~current_keys & old_keys;
+	old_keys = current_keys;
+	
+	int i;
+	for (i = 0; i < 32; i++) {
+		if (kDown & (1 << i)) {
+			SDL_KeyboardEvent ev;
+			ev.type = SDL_KEYDOWN;
+			ev.state = SDL_PRESSED;
+			ev.keysym.scancode = i;
+			ev.keysym.sym = SDLK_UNKNOWN;
+			ev.keysym.unicode = 0;
+			key_handler(&ev);
+		}
+		if (kUp & (1 << i)) {
+			SDL_KeyboardEvent ev;
+			ev.type = SDL_KEYUP;
+			ev.state = SDL_RELEASED;
+			ev.keysym.scancode = i;
+			ev.keysym.sym = SDLK_UNKNOWN;
+			ev.keysym.unicode = 0;
+			key_handler(&ev);
+		}
+	}
+#endif
 	while ((wind == window_get_front()) && SDL_PollEvent(&event))
 	{
+#ifdef __3DS__
+		con_printf(CON_URGENT, "SDL_EVENT_POLL: type=%d\n", event.type);
+#endif
 		switch(event.type) {
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
@@ -52,7 +89,21 @@ void event_poll()
 				mouse_motion_handler((SDL_MouseMotionEvent *)&event);
 				idle = 0;
 				break;
-#ifndef __3DS__
+#ifdef __3DS__
+			case SDL_JOYBUTTONDOWN:
+			case SDL_JOYBUTTONUP:
+			{
+				SDL_KeyboardEvent kev;
+				kev.type = (event.type == SDL_JOYBUTTONDOWN) ? SDL_KEYDOWN : SDL_KEYUP;
+				kev.state = (event.type == SDL_JOYBUTTONDOWN) ? SDL_PRESSED : SDL_RELEASED;
+				kev.keysym.scancode = event.jbutton.button;
+				kev.keysym.sym = SDLK_UNKNOWN;
+				kev.keysym.unicode = 0;
+				key_handler(&kev);
+				idle = 0;
+				break;
+			}
+#else
 			case SDL_JOYBUTTONDOWN:
 			case SDL_JOYBUTTONUP:
 				joy_button_handler((SDL_JoyButtonEvent *)&event);
@@ -95,7 +146,12 @@ void event_flush()
 {
 	SDL_Event event;
 	
-	while (SDL_PollEvent(&event));
+	while (SDL_PollEvent(&event))
+	{
+#ifdef __3DS__
+		con_printf(CON_URGENT, "SDL_EVENT: type=%d\n", event.type);
+#endif
+	}
 }
 
 int event_init()
@@ -147,6 +203,9 @@ void event_send(d_event *event)
 void event_process(void)
 {
 	d_event event;
+	#ifdef __3DS__
+	// con_printf(CON_URGENT, "[TITLE-BUILD-23 event_process enter\n");
+	#endif
 	window *wind = window_get_front();
 
 	timer_update();
@@ -180,10 +239,12 @@ void event_process(void)
 
 void event_toggle_focus(int activate_focus)
 {
+#ifndef __3DS__
 	if (activate_focus && GameCfg.Grabinput)
 		SDL_WM_GrabInput(SDL_GRAB_ON);
 	else
 		SDL_WM_GrabInput(SDL_GRAB_OFF);
+#endif
 	mouse_toggle_cursor(!activate_focus);
 }
 
