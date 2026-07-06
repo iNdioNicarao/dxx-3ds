@@ -933,8 +933,11 @@ bool g3_draw_tmap(int nv,g3s_point **pointlist,g3s_uvl *uvl_list,g3s_lrgb *light
 			color_array[index4+2]    = bm->bm_flags & BM_FLAG_NO_LIGHTING ? 1.0 : f2glf(light_rgb[c].b);
 			color_array[index4+3]    = color_alpha;
 		}
-		texcoord_array[index2]   = f2glf(uvl_list[c].u);
-		texcoord_array[index2+1] = f2glf(uvl_list[c].v);
+		fix safe_u, safe_v;
+		memcpy(&safe_u, &uvl_list[c].u, sizeof(fix));
+		memcpy(&safe_v, &uvl_list[c].v, sizeof(fix));
+		texcoord_array[index2]   = f2glf(safe_u);
+		texcoord_array[index2+1] = f2glf(safe_v);
 	}
 	
 	glVertexPointer(3, GL_FLOAT, 0, vertex_array);
@@ -984,22 +987,26 @@ bool g3_draw_tmap_2(int nv, g3s_point **pointlist, g3s_uvl *uvl_list, g3s_lrgb *
 		index3 = c * 3;
 		index4 = c * 4;
 		
+		fix safe_u, safe_v;
+		memcpy(&safe_u, &uvl_list[c].u, sizeof(fix));
+		memcpy(&safe_v, &uvl_list[c].v, sizeof(fix));
+		
 		switch(orient){
 			case 1:
-				texcoord_array[index2]   = 1.0-f2glf(uvl_list[c].v);
-				texcoord_array[index2+1] = f2glf(uvl_list[c].u);
+				texcoord_array[index2]   = 1.0-f2glf(safe_v);
+				texcoord_array[index2+1] = f2glf(safe_u);
 				break;
 			case 2:
-				texcoord_array[index2]   = 1.0-f2glf(uvl_list[c].u);
-				texcoord_array[index2+1] = 1.0-f2glf(uvl_list[c].v);
+				texcoord_array[index2]   = 1.0-f2glf(safe_u);
+				texcoord_array[index2+1] = 1.0-f2glf(safe_v);
 				break;
 			case 3:
-				texcoord_array[index2]   = f2glf(uvl_list[c].v);
-				texcoord_array[index2+1] = 1.0-f2glf(uvl_list[c].u);
+				texcoord_array[index2]   = f2glf(safe_v);
+				texcoord_array[index2+1] = 1.0-f2glf(safe_u);
 				break;
 			default:
-				texcoord_array[index2]   = f2glf(uvl_list[c].u);
-				texcoord_array[index2+1] = f2glf(uvl_list[c].v);
+				texcoord_array[index2]   = f2glf(safe_u);
+				texcoord_array[index2+1] = f2glf(safe_v);
 				break;
 		}
 		
@@ -1901,6 +1908,7 @@ void ogl_freebmtexture(grs_bitmap *bm){
  */
 bool ogl_ubitmapm_cs(int x, int y,int dw, int dh, grs_bitmap *bm,int c, int scale) // to scale bitmaps
 {
+	if (!bm) return false;
 	GLfloat xo,yo,xf,yf,u1,u2,v1,v2,color_r,color_g,color_b,h;
 	GLfloat color_array[] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
 	GLfloat texcoord_array[] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
