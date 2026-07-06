@@ -660,12 +660,9 @@ void key_handler(SDL_KeyboardEvent *kevent)
     #ifdef __3DS__
     // Analogue stick directions seems to activate keys 28-31 and cause
     // some weird issues, throw these away, dealt with by the JOYSTICK handler
-    con_printf(CON_URGENT, "KEY_EVENT: scancode=%d, sym=%d\n", kevent->keysym.scancode, kevent->keysym.sym);
     if (kevent->keysym.scancode < 32) {
         event_keysym = keycodes_3ds[kevent->keysym.scancode];
-        con_printf(CON_URGENT, "Mapped to 3DS key: %d\n", event_keysym);
     } else {
-        con_printf(CON_URGENT, "Ignored scancode %d\n", kevent->keysym.scancode);
         return;
     }
     #else

@@ -36,41 +36,8 @@ void event_poll()
 	
 	// If the front window changes, exit this loop, otherwise unintended behavior can occur
 	// like pressing 'Return' really fast at 'Difficulty Level' causing multiple games to be started
-#ifdef __3DS__
-	static u32 old_keys = 0;
-	hidScanInput();
-	u32 current_keys = hidKeysHeld();
-	u32 kDown = current_keys & ~old_keys;
-	u32 kUp = ~current_keys & old_keys;
-	old_keys = current_keys;
-	
-	int i;
-	for (i = 0; i < 32; i++) {
-		if (kDown & (1 << i)) {
-			SDL_KeyboardEvent ev;
-			ev.type = SDL_KEYDOWN;
-			ev.state = SDL_PRESSED;
-			ev.keysym.scancode = i;
-			ev.keysym.sym = SDLK_UNKNOWN;
-			ev.keysym.unicode = 0;
-			key_handler(&ev);
-		}
-		if (kUp & (1 << i)) {
-			SDL_KeyboardEvent ev;
-			ev.type = SDL_KEYUP;
-			ev.state = SDL_RELEASED;
-			ev.keysym.scancode = i;
-			ev.keysym.sym = SDLK_UNKNOWN;
-			ev.keysym.unicode = 0;
-			key_handler(&ev);
-		}
-	}
-#endif
 	while ((wind == window_get_front()) && SDL_PollEvent(&event))
 	{
-#ifdef __3DS__
-		con_printf(CON_URGENT, "SDL_EVENT_POLL: type=%d\n", event.type);
-#endif
 		switch(event.type) {
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
@@ -89,27 +56,25 @@ void event_poll()
 				mouse_motion_handler((SDL_MouseMotionEvent *)&event);
 				idle = 0;
 				break;
+			case SDL_JOYBUTTONDOWN:
+			case SDL_JOYBUTTONUP:
 #ifdef __3DS__
-			case SDL_JOYBUTTONDOWN:
-			case SDL_JOYBUTTONUP:
-			{
-				SDL_KeyboardEvent kev;
-				kev.type = (event.type == SDL_JOYBUTTONDOWN) ? SDL_KEYDOWN : SDL_KEYUP;
-				kev.state = (event.type == SDL_JOYBUTTONDOWN) ? SDL_PRESSED : SDL_RELEASED;
-				kev.keysym.scancode = event.jbutton.button;
-				kev.keysym.sym = SDLK_UNKNOWN;
-				kev.keysym.unicode = 0;
-				key_handler(&kev);
-				idle = 0;
-				break;
-			}
-#else
-			case SDL_JOYBUTTONDOWN:
-			case SDL_JOYBUTTONUP:
+				// Map physical Start button (button index 3) to Escape key so it pauses/exits menus
+				if (event.jbutton.button == 3) {
+					SDL_KeyboardEvent kev;
+					kev.type = (event.type == SDL_JOYBUTTONDOWN) ? SDL_KEYDOWN : SDL_KEYUP;
+					kev.state = (event.type == SDL_JOYBUTTONDOWN) ? SDL_PRESSED : SDL_RELEASED;
+					kev.keysym.scancode = 3; // KEY_START
+					kev.keysym.sym = SDLK_ESCAPE;
+					kev.keysym.unicode = 0;
+					key_handler(&kev);
+					idle = 0;
+					break;
+				}
+#endif
 				joy_button_handler((SDL_JoyButtonEvent *)&event);
 				idle = 0;
 				break;
-#endif
 			case SDL_JOYAXISMOTION:
 				if (joy_axis_handler((SDL_JoyAxisEvent *)&event))
 					idle = 0;
@@ -146,12 +111,7 @@ void event_flush()
 {
 	SDL_Event event;
 	
-	while (SDL_PollEvent(&event))
-	{
-#ifdef __3DS__
-		con_printf(CON_URGENT, "SDL_EVENT: type=%d\n", event.type);
-#endif
-	}
+	while (SDL_PollEvent(&event));
 }
 
 int event_init()
