@@ -59,22 +59,22 @@ void event_poll()
 			case SDL_JOYBUTTONDOWN:
 			case SDL_JOYBUTTONUP:
 #ifdef __3DS__
-				// Map physical Start button (button index 3) to Escape key so it pauses/exits menus
-				if (event.jbutton.button == 3) {
-					SDL_KeyboardEvent kev;
-					kev.type = (event.type == SDL_JOYBUTTONDOWN) ? SDL_KEYDOWN : SDL_KEYUP;
-					kev.state = (event.type == SDL_JOYBUTTONDOWN) ? SDL_PRESSED : SDL_RELEASED;
-					kev.keysym.scancode = 3; // KEY_START
-					kev.keysym.sym = SDLK_ESCAPE;
-					kev.keysym.unicode = 0;
-					key_handler(&kev);
-					idle = 0;
-					break;
-				}
-#endif
+			{
+				SDL_KeyboardEvent kev;
+				kev.type = (event.type == SDL_JOYBUTTONDOWN) ? SDL_KEYDOWN : SDL_KEYUP;
+				kev.state = (event.type == SDL_JOYBUTTONDOWN) ? SDL_PRESSED : SDL_RELEASED;
+				kev.keysym.scancode = event.jbutton.button;
+				kev.keysym.sym = SDLK_UNKNOWN;
+				kev.keysym.unicode = 0;
+				key_handler(&kev);
+				idle = 0;
+				break;
+			}
+#else
 				joy_button_handler((SDL_JoyButtonEvent *)&event);
 				idle = 0;
 				break;
+#endif
 			case SDL_JOYAXISMOTION:
 				if (joy_axis_handler((SDL_JoyAxisEvent *)&event))
 					idle = 0;
