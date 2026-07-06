@@ -38,10 +38,10 @@ static keyboard key_data;
 /* For some reason SDL keymappings aren't set by default */
 static const SDLKey keycodes_3ds[32] = 
 {
-    SDLK_RETURN,
-    SDLK_ESCAPE,
-    SDLK_BACKSPACE,
-    SDLK_SPACE,
+    SDLK_RETURN,      // KEY_A = 0
+    SDLK_SPACE,       // KEY_B = 1
+    SDLK_BACKSPACE,   // KEY_SELECT = 2
+    SDLK_ESCAPE,      // KEY_START = 3
     SDLK_RIGHT,
     SDLK_LEFT,
     SDLK_UP,
