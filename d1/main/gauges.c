@@ -1563,13 +1563,15 @@ void draw_player_ship(int cloak_state,int x, int y)
 		bm = &GameBitmaps[Gauges[GAUGE_SHIPS+get_team(Player_num)].index];
 	}
 	else
+#endif
 	{
-		int color = Netgame.players[Player_num].color; 
-		
+		int color = 0;
+#ifdef NETWORK
+		color = Netgame.players[Player_num].color; 
+#endif
 		PIGGY_PAGE_IN(Gauges[GAUGE_SHIPS+color]);
 		bm = &GameBitmaps[Gauges[GAUGE_SHIPS+color].index];
 	}
-#endif
 
 	//for(int i = 0; i < 8; i++) {
 	//	con_printf(CON_NORMAL, "Player ship %d %d\n", i, Gauges[GAUGE_SHIPS+i].index);
