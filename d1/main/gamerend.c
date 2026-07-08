@@ -465,7 +465,10 @@ void game_draw_hud_stuff()
 
 	render_countdown_gauge();
 
-	if (GameCfg.FPSIndicator && PlayerCfg.CockpitMode[1] != CM_REAR_VIEW)
+	// Show FPS on the death screen too: while Player_is_dead the cockpit mode
+	// may still be CM_REAR_VIEW (if ZL was held at death), which would otherwise
+	// suppress the indicator. The user wants FPS visible on the death screen.
+	if (GameCfg.FPSIndicator && (PlayerCfg.CockpitMode[1] != CM_REAR_VIEW || Player_is_dead))
 		show_framerate();
 
 	if ( (Game_mode & GM_MULTI) && (PlayerCfg.ObsShowObs)) {
@@ -542,6 +545,49 @@ void toggle_cockpit()
 	select_cockpit(new_mode);
 	HUD_clear_messages();
 	PlayerCfg.CockpitMode[0] = new_mode;
+	write_player_file();
+}
+
+// 3DS: cycle through the three main cockpit views (full cockpit -> status bar
+// -> full screen -> back). Bound to SELECT + D-UP / D-DOWN in event.c so it
+// doesn't collide with the plain SELECT (automap) tap or gameplay buttons.
+void cycle_cockpit_next(void)
+{
+	int order[] = { CM_FULL_COCKPIT, CM_STATUS_BAR, CM_FULL_SCREEN };
+	int i;
+	if (Rear_view || Player_is_dead)
+		return;
+	for (i = 0; i < 3; i++)
+		if (PlayerCfg.CockpitMode[1] == order[i]) {
+			int next = order[(i+1)%3];
+			if (next == CM_FULL_COCKPIT && PlayerCfg.DisableCockpit)
+				next = CM_STATUS_BAR;
+			select_cockpit(next);
+			PlayerCfg.CockpitMode[0] = next;
+			write_player_file();
+			return;
+		}
+	select_cockpit(CM_STATUS_BAR);
+	PlayerCfg.CockpitMode[0] = CM_STATUS_BAR;
+	write_player_file();
+}
+
+void cycle_cockpit_prev(void)
+{
+	int order[] = { CM_FULL_COCKPIT, CM_STATUS_BAR, CM_FULL_SCREEN };
+	int i;
+	if (Rear_view || Player_is_dead)
+		return;
+	for (i = 0; i < 3; i++)
+		if (PlayerCfg.CockpitMode[1] == order[i]) {
+			int prev = order[(i+2)%3];
+			select_cockpit(prev);
+			PlayerCfg.CockpitMode[0] = prev;
+			write_player_file();
+			return;
+		}
+	select_cockpit(CM_STATUS_BAR);
+	PlayerCfg.CockpitMode[0] = CM_STATUS_BAR;
 	write_player_file();
 }
 

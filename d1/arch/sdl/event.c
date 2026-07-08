@@ -28,6 +28,8 @@ extern int state_quick_save(void);
 extern int state_quick_load(void);
 extern int Automap_active;
 extern void show_controls_3ds(void);
+extern void cycle_cockpit_next(void);
+extern void cycle_cockpit_prev(void);
 
 // Emit a synthetic key as a clean pulse (down then up) so no key state lingers.
 // key_handler() keeps sticky keyd_pressed[] state, and modal dialogs (e.g. the
@@ -44,6 +46,15 @@ static void send_key_pulse(SDLKey sym) {
 }
 
 static int initialised=0;
+
+// Deferred quick-save/load flags. We must NOT call state_quick_save()/
+// state_quick_load() from inside event_poll()'s SDL_PollEvent loop: those
+// rebuild the level/window stack (StartNewLevelSub, window_set_visible, SD
+// file reads) mid-dispatch, which corrupts event/window state and breaks
+// input after a quick-load. So the HID loop only SETS these flags; they are
+// acted on once, after event_poll() returns (see event_process).
+static int pending_quick_save = 0;
+static int pending_quick_load = 0;
 
 typedef struct d_event_joystick_moved
 {
@@ -154,20 +165,25 @@ void event_poll()
 		if (kDown & btn_map[i].mask) {
 			if (btn_map[i].mask == (1<<3)) {
 				if (current_keys & (1<<10))
-					state_quick_save();
+					pending_quick_save = 1;
 				else if (current_keys & (1<<11))
-					state_quick_load();
+					pending_quick_load = 1;
 				else if (current_keys & (1<<9))
 					show_controls_3ds();
 				else
 					send_key_pulse(SDLK_ESCAPE);
 				idle = 0;
-			} else if (btn_map[i].mask == (1<<4)) {
+				} else if (btn_map[i].mask == (1<<4)) {
 				send_key_pulse(SDLK_x); idle = 0;
-			} else if (btn_map[i].mask == (1<<5)) {
+				} else if (btn_map[i].mask == (1<<5)) {
 				send_key_pulse(SDLK_y); idle = 0;
-			}
-		}
+				}
+				}
+				// SELECT + D-UP / D-DOWN cycles cockpit views (SELECT alone = automap).
+				if ((current_keys & (1<<2)) && (kDown & (1<<6)))
+				cycle_cockpit_next();
+				else if ((current_keys & (1<<2)) && (kDown & (1<<7)))
+				cycle_cockpit_prev();
 	}
 
 	for (int i = 0; btn_map[i].mask != 0; i++) {
@@ -314,6 +330,13 @@ void event_process(void)
 	timer_update();
 
 	event_poll();	// send input events first
+
+	// Process deferred quick-save/load HERE, after event_poll() has returned,
+	// so state_restore_all_sub()/state_save_all_sub() never run mid-dispatch
+	// inside the poll loop (which corrupted the window/event stack and broke
+	// input after a quick-load).
+	if (pending_quick_save) { pending_quick_save = 0; state_quick_save(); }
+	if (pending_quick_load) { pending_quick_load = 0; state_quick_load(); }
 
 	// Doing this prevents problems when a draw event can create a newmenu,
 	// such as some network menus when they report a problem
