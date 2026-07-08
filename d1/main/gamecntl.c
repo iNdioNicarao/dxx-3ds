@@ -1327,9 +1327,19 @@ int ReadControls(d_event *event)
 	} else {
 		exploding_flag=0;
 	}
+	// NOTE: HandleDeathInput() was previously only called under #ifdef NETWORK.
+	// That meant in single-player the "press any key to continue" death screen
+	// could NEVER be dismissed by a controller (no EVENT_KEY_COMMAND ever set
+	// Death_sequence_aborted). The function is safe to call unconditionally
+	// (returns 0 when not exploded), so we now always call it. The NETWORK
+	// preview fall-through logic stays inside the function, guarded below.
 #ifdef NETWORK
 	if (Player_is_dead && !( (Game_mode & GM_MULTI) && (multi_sending_message[Player_num] || multi_defining_message) ))
+#else
+	if (Player_is_dead)
+#endif
 		if (HandleDeathInput(event)) {
+#ifdef NETWORK
 			if( (Game_mode & GM_MULTI) && (Netgame.SpawnStyle == SPAWN_STYLE_PREVIEW) ) {
 				// fall through to normal key handler
 
@@ -1339,8 +1349,10 @@ int ReadControls(d_event *event)
 
 				return 1;
 			}
-		}
+#else
+			return 1;
 #endif
+		}
 
 
 #ifdef NETWORK
