@@ -157,11 +157,17 @@ Outputs: `d1/d1x-3ds.3dsx`, `d1/d1x-3ds.elf`, `d1/3ds_data/d1x-3ds.cia`
 > (`MAKE_RC=0`) *and* check the `.cia` md5 before shipping.
 
 ### Graphics backend
-- Rendering uses **picaGL** (`libs/picaGL`), a thin OpenGL-1.1-compatible layer
-  that translates GL calls into PICA200 GPU commands. It outputs to the top
-  screen.
-- Because picaGL lacks `GL_LINES` and `glLineWidth`, all line drawing must use
-  triangle primitives (see the automap fix above).
+- **Rendering is hardware-accelerated via picaGL** (`libs/picaGL`), a thin
+  OpenGL-1.1-compatible layer that translates GL calls into native **PICA200 GPU**
+  commands. The framebuffer is presented to the top screen (`pglSwapBuffers()`).
+  This replaces the desktop OpenGL backend used by upstream DXX-Rebirth, which
+  the 3DS has no driver for.
+- **SDL is the app framework, not the renderer.** On 3DS, SDL (1.2 port) is used
+  only for the **event loop, input (buttons/analog), audio, and timing**. It
+  creates a dummy software surface purely to satisfy SDL init; all actual
+  drawing goes through picaGL/GPU. (SDL's own software renderer is not used.)
+- Because picaGL lacks `GL_LINES` and `glLineWidth` is a no-op stub, all line
+  drawing must use triangle primitives (see the automap fix above).
 
 ---
 
