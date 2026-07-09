@@ -709,6 +709,7 @@ void StartNewGame(int start_level)
 	// This is what makes the levelwarp / start-at-level cheats reachable via
 	// controller. Desktop builds leave this off (user types the code).
 	cheats.enabled = 1;
+	{ extern void dbg_dump_joy(const char *); dbg_dump_joy("game-start-baseline"); }
 #endif
 }
 

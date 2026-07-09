@@ -1563,6 +1563,7 @@ RetryObjectLoading:
 	// Also force Game_wind to the front (window_select) as belt-and-suspenders
 	// for any window-routed input, and re-show it.
 	game_flush_inputs();
+	{ extern void dbg_dump_joy(const char *); dbg_dump_joy("after-quickload"); }
 	if (Game_wind) {
 		window_set_visible(Game_wind, 1);
 		window_select(Game_wind);

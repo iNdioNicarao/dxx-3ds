@@ -1874,3 +1874,20 @@ void kc_set_controls()
 	for (i=0; i<NUM_D1X_CONTROLS; i++ )
 		kc_d1x[i].value = PlayerCfg.KeySettingsD1X[i];
 }
+
+// v38 diagnostic: dump joystick control bindings + ControlType to pwrtrace.txt.
+// Called at game start (baseline) and after quick-load (broken case) so we
+// can diff what quick-load corrupts. (SDL_Joysticks is static in joy.c, so we
+// only dump the game-side kc_joystick bindings + ControlType here.)
+void dbg_dump_joy(const char *tag)
+{
+	int i;
+	FILE *pf = fopen("pwrtrace.txt", "a");
+	if (!pf) return;
+	fprintf(pf, "=== joy dump [%s] ===\n", tag);
+	fprintf(pf, "ControlType=0x%x JOY_bit=%d\n", (int)PlayerCfg.ControlType, (int)(PlayerCfg.ControlType & CONTROL_USING_JOYSTICK));
+	for (i = 0; i < NUM_JOYSTICK_CONTROLS; i++)
+		fprintf(pf, "kc_joystick[%d].value=%d type=%d\n", i, (int)kc_joystick[i].value, (int)kc_joystick[i].type);
+	fprintf(pf, "=== end joy dump [%s] ===\n", tag);
+	fclose(pf);
+}
