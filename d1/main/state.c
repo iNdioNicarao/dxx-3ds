@@ -1564,6 +1564,16 @@ RetryObjectLoading:
 	// for any window-routed input, and re-show it.
 	game_flush_inputs();
 	{ extern void dbg_dump_joy(const char *); dbg_dump_joy("after-quickload"); }
+	// v38 ROOT FIX: state_restore_all_sub restores ConsoleObject->control_type
+	// from the save file (gamesave.c). If that value isn't CT_FLYING, the
+	// player object is stuck in CT_NONE/other, so object.c:1772 never calls
+	// read_flying_controls -> ALL flight input (A/B/X/Y + sticks) is dead,
+	// while window-handler buttons (L/ZL/SELECT) still work. This exactly
+	// matches the "in-game quick-load breaks input, menu-start works" bug
+	// (StartNewLevel sets CT_FLYING; the in-game restore does not). Force it.
+	if (ConsoleObject)
+		ConsoleObject->control_type = CT_FLYING;
+	Player_is_dead = 0;
 	if (Game_wind) {
 		window_set_visible(Game_wind, 1);
 		window_select(Game_wind);
