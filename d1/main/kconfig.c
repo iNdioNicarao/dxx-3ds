@@ -1875,17 +1875,20 @@ void kc_set_controls()
 		kc_d1x[i].value = PlayerCfg.KeySettingsD1X[i];
 }
 
-// v38 diagnostic: dump joystick control bindings + ControlType to pwrtrace.txt.
-// Called at game start (baseline) and after quick-load (broken case) so we
-// can diff what quick-load corrupts. (SDL_Joysticks is static in joy.c, so we
-// only dump the game-side kc_joystick bindings + ControlType here.)
+// v38 diagnostic: dump joystick control bindings + ControlType + the player
+// object's control_type to pwrtrace.txt. Called at game start (baseline) and
+// after quick-load (broken case) so we can see what quick-load corrupts.
+// (SDL_Joysticks is static in joy.c, so we only dump the game-side state here.)
 void dbg_dump_joy(const char *tag)
 {
 	int i;
 	FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
 	if (!pf) return;
 	fprintf(pf, "=== joy dump [%s] ===\n", tag);
-	fprintf(pf, "ControlType=0x%x JOY_bit=%d\n", (int)PlayerCfg.ControlType, (int)(PlayerCfg.ControlType & CONTROL_USING_JOYSTICK));
+	fprintf(pf, "ControlType=0x%x JOY_bit=%d Player_is_dead=%d\n", (int)PlayerCfg.ControlType, (int)(PlayerCfg.ControlType & CONTROL_USING_JOYSTICK), (int)Player_is_dead);
+	fprintf(pf, "ConsoleObject=%p control_type=%d (CT_FLYING=%d)\n", (void*)ConsoleObject, ConsoleObject ? (int)ConsoleObject->control_type : -1, (int)CT_FLYING);
+	fprintf(pf, "Players[%d].objnum=%d obj control_type=%d\n", Player_num, (int)Players[Player_num].objnum,
+	        (Players[Player_num].objnum >= 0 && Players[Player_num].objnum < MAX_OBJECTS) ? (int)Objects[Players[Player_num].objnum].control_type : -1);
 	for (i = 0; i < NUM_JOYSTICK_CONTROLS; i++)
 		fprintf(pf, "kc_joystick[%d].value=%d type=%d\n", i, (int)kc_joystick[i].value, (int)kc_joystick[i].type);
 	fprintf(pf, "=== end joy dump [%s] ===\n", tag);
