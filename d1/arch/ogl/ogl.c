@@ -505,27 +505,45 @@ void ogl_cache_level_textures(void)
 	r_cachedtexcount = r_texcount;
 }
 
+// 3DS fix: picaGL has NO GL_LINES support (arrays.c only handles
+// TRIANGLES/TRIANGLE_FAN/TRIANGLE_STRIP, and glLineWidth is a no-op stub), so a
+// GL_LINES draw becomes a degenerate invisible triangle. Emit the line as a
+// thin TRIANGLE_STRIP quad (4 verts: p0+-n, p1+-n) with fixed view-space
+// thickness, same technique as ogl_draw_line_vec.
 bool g3_draw_line(g3s_point *p0,g3s_point *p1)
 {
 	int c;
-	GLfloat color_r, color_g, color_b;
-	GLfloat color_array[] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
-	GLfloat vertex_array[] = { f2glf(p0->p3_vec.x),f2glf(p0->p3_vec.y),-f2glf(p0->p3_vec.z), f2glf(p1->p3_vec.x),f2glf(p1->p3_vec.y),-f2glf(p1->p3_vec.z) };
-  
-	c=grd_curcanv->cv_color;
+	GLfloat color_array[16];
+	GLfloat verts[12];
+	float ax = f2glf(p0->p3_vec.x), ay = f2glf(p0->p3_vec.y), az = -f2glf(p0->p3_vec.z);
+	float bx = f2glf(p1->p3_vec.x), by = f2glf(p1->p3_vec.y), bz = -f2glf(p1->p3_vec.z);
+	float dx = bx - ax, dy = by - ay;
+	float len = sqrtf(dx*dx + dy*dy);
+	float t = 0.6f;		// thickness in view units (match automap)
+	float nx = 0.0f, ny = 0.0f;
+	if (len > 1e-6f) { nx = -dy / len * t; ny = dx / len * t; }
+	verts[0]=ax+nx; verts[1]=ay+ny; verts[2]=az;
+	verts[3]=ax-nx; verts[4]=ay-ny; verts[5]=az;
+	verts[6]=bx+nx; verts[7]=by+ny; verts[8]=bz;
+	verts[9]=bx-nx; verts[10]=by-ny; verts[11]=bz;
+	c = grd_curcanv->cv_color;
+	{
+		GLfloat r = PAL2Tr(c), g = PAL2Tg(c), b = PAL2Tb(c);
+		int i;
+		for (i = 0; i < 4; i++) {
+			color_array[i*4+0] = r;
+			color_array[i*4+1] = g;
+			color_array[i*4+2] = b;
+			color_array[i*4+3] = 1.0f;
+		}
+	}
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 	OGL_DISABLE(TEXTURE_2D);
-	color_r = PAL2Tr(c);
-	color_g = PAL2Tg(c);
-	color_b = PAL2Tb(c);
-	color_array[0] = color_array[4] = color_r;
-	color_array[1] = color_array[5] = color_g;
-	color_array[2] = color_array[6] = color_b;
-	color_array[3] = color_array[7] = 1.0;
-	glVertexPointer(3, GL_FLOAT, 0, vertex_array);
+	glDisable(GL_CULL_FACE);
+	glVertexPointer(3, GL_FLOAT, 0, verts);
 	glColorPointer(4, GL_FLOAT, 0, color_array);
-	glDrawArrays(GL_LINES, 0, 2);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
 

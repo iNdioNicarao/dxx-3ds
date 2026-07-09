@@ -704,6 +704,12 @@ void StartNewGame(int start_level)
 	Players[Player_num].starting_level = start_level;		// Mark where they started
 
 	game_disable_cheats();
+#ifdef __3DS__
+	// 3DS has no keyboard to toggle cheats on, so enable them at game start.
+	// This is what makes the levelwarp / start-at-level cheats reachable via
+	// controller. Desktop builds leave this off (user types the code).
+	cheats.enabled = 1;
+#endif
 }
 
 //	-----------------------------------------------------------------------------

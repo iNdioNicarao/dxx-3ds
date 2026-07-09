@@ -1552,6 +1552,15 @@ RetryObjectLoading:
 	if (Game_wind)
 		if (!window_is_visible(Game_wind))
 			window_set_visible(Game_wind, 1);
+#ifdef __3DS__
+	// After a quick-load the window/event stack was rebuilt mid-dispatch in a
+	// prior build, which left joystick input dead (only keyboard pulses
+	// survived). Reset the stuck keyboard state so joystick button events
+	// route correctly again. This also fixes the case where input stays
+	// broken into a subsequent new game. Re-showing Game_wind (above) puts it
+	// back at the front of the window stack.
+	key_flush();
+#endif
 	reset_time();
 
 	return 1;

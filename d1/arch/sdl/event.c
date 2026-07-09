@@ -174,17 +174,21 @@ void event_poll()
 					send_key_pulse(SDLK_ESCAPE);
 				idle = 0;
 				} else if (btn_map[i].mask == (1<<4)) {
-				send_key_pulse(SDLK_x); idle = 0;
+					send_key_pulse(SDLK_x); idle = 0;
 				} else if (btn_map[i].mask == (1<<5)) {
-				send_key_pulse(SDLK_y); idle = 0;
+					send_key_pulse(SDLK_y); idle = 0;
 				}
-				}
-				// SELECT + D-UP / D-DOWN cycles cockpit views (SELECT alone = automap).
-				if ((current_keys & (1<<2)) && (kDown & (1<<6)))
-				cycle_cockpit_next();
-				else if ((current_keys & (1<<2)) && (kDown & (1<<7)))
-				cycle_cockpit_prev();
-	}
+				// Cockpit view-cycle: hold START + tap R (next) / L (prev).
+				// SELECT alone stays Automap; SELECT+dpad is unused to avoid
+				// the automap-vs-cycle conflict.
+				if (btn_map[i].mask == (1<<3)) {
+					if (current_keys & (1<<8))		// START + R = next view
+						cycle_cockpit_next();
+					else if (current_keys & (1<<9))	// START + L = prev view
+						cycle_cockpit_prev();
+						}
+						}
+						}
 
 	for (int i = 0; btn_map[i].mask != 0; i++) {
 		if (kDown & btn_map[i].mask) {

@@ -18,9 +18,12 @@
 
 void arch_close(void)
 {
+	con_printf(CON_CRITICAL, "[PWR] arch_close entered\n");
 	songs_uninit();
+	con_printf(CON_CRITICAL, "[PWR] arch_close: songs_uninit done\n");
 
 	gr_close();
+	con_printf(CON_CRITICAL, "[PWR] arch_close: gr_close done\n");
 
 	if (!GameArg.CtlNoJoystick)
 		joy_close();

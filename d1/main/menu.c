@@ -840,7 +840,7 @@ int do_new_game_menu()
 			sprintf(info_text,"%s %d",TXT_START_ANY_LEVEL, player_highest_level);
 
 			m[0].type=NM_TYPE_TEXT; m[0].text = info_text;
-			m[1].type=NM_TYPE_INPUT; m[1].text_len = 10; m[1].text = num_text;
+			m[1].type=NM_TYPE_NUMBER; m[1].value=1; m[1].min_value=1; m[1].max_value=player_highest_level; m[1].text="Level";
 			n_items = 2;
 
 #ifdef __3DS__
@@ -851,10 +851,10 @@ int do_new_game_menu()
 
 			choice = newmenu_do( NULL, TXT_SELECT_START_LEV, n_items, m, NULL, NULL );
 
-			if (choice==-1 || m[1].text[0]==0)
+			if (choice==-1)
 				return 0;
 
-			new_level_num = atoi(m[1].text);
+			new_level_num = m[1].value;
 
 			if (!(new_level_num>0 && new_level_num<=player_highest_level)) {
 				m[0].text = TXT_ENTER_TO_CONT;

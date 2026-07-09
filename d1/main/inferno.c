@@ -487,9 +487,15 @@ int main(int argc, char *argv[])
 #else
 	while (window_get_front())
 #endif
-		// Send events to windows and the default handler
+	{
+		// v36 power-off trace: confirm the loop actually exits on power-off.
+#ifdef __3DS__
+		static int _loop_exited_printed = 0;
+		if (!_loop_exited_printed) { con_printf(CON_CRITICAL, "[PWR] main loop exited (aptMainLoop false)\n"); _loop_exited_printed = 1; }
+#endif
 		event_process();
-	
+	}
+
 	// Tidy up - avoids a crash on exit
 	{
 		window *wind;
