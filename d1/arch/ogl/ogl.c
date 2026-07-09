@@ -536,35 +536,53 @@ bool g3_draw_line(g3s_point *p0,g3s_point *p1)
 // their view-space p3_vec under the current GL modelview (same proven
 // technique as g3_draw_sphere). The default g3_draw_line -> gr_line path uses
 // the perspective-projected p3_sx/p3_sy, which is broken for the top-down
-// automap view (coords explode off-canvas). Using p3_vec directly aligns the
-// lines with the marker sphere.
+// automap view (coords explode off-canvas).
+//
+// IMPORTANT: picaGL's glDrawArrays only supports TRIANGLES / TRIANGLE_FAN /
+// TRIANGLE_STRIP (arrays.c has NO case for GL_LINES), so a GL_LINES draw falls
+// through to GPU_TRIANGLES and renders as a degenerate (invisible) triangle.
+// Therefore we emit the line as a thin TRIANGLE_STRIP quad (4 verts: p0+-n,
+// p1+-n) with a fixed view-space thickness. glLineWidth is also a no-op stub
+// in picaGL, so a real width must come from the quad geometry.
 void ogl_draw_line_vec(g3s_point *p0, g3s_point *p1)
 {
 	int c;
-	GLfloat color_r, color_g, color_b;
-	GLfloat color_array[] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
-	GLfloat dx = f2glf(p1->p3_vec.x - p0->p3_vec.x);
-	GLfloat dy = f2glf(p1->p3_vec.y - p0->p3_vec.y);
-	GLfloat dz = -f2glf(p1->p3_vec.z - p0->p3_vec.z);
-	GLfloat vertex_array[] = { 0.0, 0.0, 0.0, dx, dy, dz };
+	GLfloat color_array[16];
+	GLfloat verts[12];
+	// view-space endpoints (note z is negated like the rest of ogl.c)
+	float ax = f2glf(p0->p3_vec.x), ay = f2glf(p0->p3_vec.y), az = -f2glf(p0->p3_vec.z);
+	float bx = f2glf(p1->p3_vec.x), by = f2glf(p1->p3_vec.y), bz = -f2glf(p1->p3_vec.z);
+	// direction in the screen plane, perpendicular offset = line thickness
+	float dx = bx - ax, dy = by - ay;
+	float len = sqrtf(dx*dx + dy*dy);
+	float t = 1.2f;		// thickness in view units (tune for visibility)
+	float nx = 0.0f, ny = 0.0f;
+	if (len > 1e-6f) { nx = -dy / len * t; ny = dx / len * t; }
+
+	// triangle strip: p0+n, p0-n, p1+n, p1-n
+	verts[0]  = ax + nx; verts[1]  = ay + ny; verts[2]  = az;
+	verts[3]  = ax - nx; verts[4]  = ay - ny; verts[5]  = az;
+	verts[6]  = bx + nx; verts[7]  = by + ny; verts[8]  = bz;
+	verts[9]  = bx - nx; verts[10] = by - ny; verts[11] = bz;
 
 	c = grd_curcanv->cv_color;
+	{
+		GLfloat r = PAL2Tr(c), g = PAL2Tg(c), b = PAL2Tb(c);
+		int i;
+		for (i = 0; i < 4; i++) {
+			color_array[i*4+0] = r;
+			color_array[i*4+1] = g;
+			color_array[i*4+2] = b;
+			color_array[i*4+3] = 1.0f;
+		}
+	}
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 	OGL_DISABLE(TEXTURE_2D);
-	color_r = PAL2Tr(c);
-	color_g = PAL2Tg(c);
-	color_b = PAL2Tb(c);
-	color_array[0] = color_array[4] = color_r;
-	color_array[1] = color_array[5] = color_g;
-	color_array[2] = color_array[6] = color_b;
-	color_array[3] = color_array[7] = 1.0;
-	glVertexPointer(3, GL_FLOAT, 0, vertex_array);
+	glDisable(GL_CULL_FACE);	// strip must show from both sides
+	glVertexPointer(3, GL_FLOAT, 0, verts);
 	glColorPointer(4, GL_FLOAT, 0, color_array);
-	glPushMatrix();
-	glTranslatef(f2glf(p0->p3_vec.x), f2glf(p0->p3_vec.y), -f2glf(p0->p3_vec.z));
-	glDrawArrays(GL_LINES, 0, 2);
-	glPopMatrix();
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
 }
