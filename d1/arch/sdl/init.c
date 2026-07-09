@@ -29,11 +29,13 @@ void arch_close(void)
 
 // aagallag: TODO -- Fix bug so we can gracefully exit
 #ifdef __3DS__
-	printf("Press the home button to exit...\n");
-	while (aptMainLoop()) 
-    {
-		svcSleepThread(1000UL * 1000UL * 100UL);
-    }
+	printf("Press the home button to exit... (power off will terminate the app)\n");
+	// NOTE: do NOT re-enter while(aptMainLoop()) here. The main loop
+	// (inferno.c) already gates on aptMainLoop() and returns when power-off /
+	// HOME is requested. Re-polling aptMainLoop() inside this atexit handler,
+	// after the display is already being torn down by the OS, deadlocks on a
+	// suspended GPU and leaves the console on two black screens (the
+	// "power-off hang"). Just release resources and let the process exit.
 #endif
 
 	if (!GameArg.SndNoSound)
