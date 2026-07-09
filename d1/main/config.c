@@ -232,6 +232,16 @@ int ReadConfigFile()
 	if (GameCfg.ResolutionX >= 320 && GameCfg.ResolutionY >= 200)
 		Game_screen_mode = SM(GameCfg.ResolutionX,GameCfg.ResolutionY);
 
+#ifdef __3DS__
+	// The 3DS has no keyboard to change this in the options menu, and the
+	// PICA200 GPU supports bilinear filtering (GPU_LINEAR) cheaply. Force
+	// bilinear (TexFilt=1) so the game doesn't render with the desktop
+	// default of nearest (blocky/pixelated). Mipmaps (>=2) are left off
+	// because picaGL does not generate mip levels for loaded textures.
+	if (GameCfg.TexFilt < 1)
+		GameCfg.TexFilt = 1;
+#endif
+
 	return 0;
 }
 

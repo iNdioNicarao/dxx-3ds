@@ -1177,15 +1177,16 @@ int FinalCheats(int key)
 	if (cheat_codes[gotcha].stateptr == &cheats.levelwarp)
 	{
 		newmenu_item m;
-		char text[10]="";
 		int new_level_num;
 		int item;
 		*cheat_codes[gotcha].stateptr = 0;
-		m.type=NM_TYPE_INPUT; m.text_len = 10; m.text = text;
+		// 3DS has no keyboard, so use a numeric slider (d-pad up/down) instead
+		// of NM_TYPE_INPUT text entry. Range 1..Last_level.
+		m.type=NM_TYPE_NUMBER; m.value=1; m.min_value=1; m.max_value=(Last_level>0?Last_level:30); m.text="Level";
 		item = newmenu_do( NULL, TXT_WARP_TO_LEVEL, 1, &m, NULL, NULL );
 		if (item != -1) {
-			new_level_num = atoi(m.text);
-			if (new_level_num!=0 && new_level_num>=0 && new_level_num<=Last_level)
+			new_level_num = m.value;
+			if (new_level_num!=0 && new_level_num>=1 && new_level_num<=Last_level)
 			{
 				window_set_visible(Game_wind, 0);
 				StartNewLevel(new_level_num);
