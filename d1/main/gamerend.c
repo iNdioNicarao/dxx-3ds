@@ -82,6 +82,16 @@ void show_framerate()
 	int y = GHEIGHT;
 	static fix64 fps_time = 0;
 
+	// On the death screen the user wants the FPS readable, so use the large
+	// font and centre it near the top instead of the tiny top-right corner.
+	if (Player_is_dead)
+	{
+		gr_set_curfont(HUGE_FONT);
+		gr_set_fontcolor(BM_XRGB(0,63,0),-1);
+		gr_printf(0x8000, FSPACY(2), "FPS: %i", fps_rate);
+		return;
+	}
+
 	gr_set_curfont(GAME_FONT);
 	gr_set_fontcolor(BM_XRGB(0,31,0),-1);
 
