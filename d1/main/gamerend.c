@@ -465,10 +465,11 @@ void game_draw_hud_stuff()
 
 	render_countdown_gauge();
 
-	// Show FPS on the death screen too: while Player_is_dead the cockpit mode
-	// may still be CM_REAR_VIEW (if ZL was held at death), which would otherwise
-	// suppress the indicator. The user wants FPS visible on the death screen.
-	if (GameCfg.FPSIndicator && (PlayerCfg.CockpitMode[1] != CM_REAR_VIEW || Player_is_dead))
+	// Show FPS on the death screen unconditionally: the user wants it there,
+	// and there is no controller toggle for GameCfg.FPSIndicator (defaults 0,
+	// no keyboard to enable it on 3DS). In-game FPS still respects the config
+	// flag; on the death screen we force it regardless of cockpit mode.
+	if (GameCfg.FPSIndicator || Player_is_dead)
 		show_framerate();
 
 	if ( (Game_mode & GM_MULTI) && (PlayerCfg.ObsShowObs)) {

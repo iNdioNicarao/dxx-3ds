@@ -555,7 +555,7 @@ void ogl_draw_line_vec(g3s_point *p0, g3s_point *p1)
 	// direction in the screen plane, perpendicular offset = line thickness
 	float dx = bx - ax, dy = by - ay;
 	float len = sqrtf(dx*dx + dy*dy);
-	float t = 1.2f;		// thickness in view units (tune for visibility)
+	float t = 0.6f;		// thickness in view units (tune for visibility)
 	float nx = 0.0f, ny = 0.0f;
 	if (len > 1e-6f) { nx = -dy / len * t; ny = dx / len * t; }
 
