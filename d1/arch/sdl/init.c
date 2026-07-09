@@ -22,18 +22,18 @@ void arch_close(void)
 	// which gets locked/corrupted when the console is force-powered-off mid
 	// write). Each call opens+flushes+closes so the line survives a hang.
 	{
-		FILE *pf = fopen("pwrtrace.txt", "a");
+		FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
 		if (pf) { fprintf(pf, "arch_close entered\n"); fclose(pf); }
 	}
 	songs_uninit();
 	{
-		FILE *pf = fopen("pwrtrace.txt", "a");
+		FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
 		if (pf) { fprintf(pf, "songs_uninit done\n"); fclose(pf); }
 	}
 
 	gr_close();
 	{
-		FILE *pf = fopen("pwrtrace.txt", "a");
+		FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
 		if (pf) { fprintf(pf, "gr_close done\n"); fclose(pf); }
 	}
 
@@ -61,12 +61,12 @@ void arch_close(void)
 	key_close();
 
 	{
-		FILE *pf = fopen("pwrtrace.txt", "a");
+		FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
 		if (pf) { fprintf(pf, "before SDL_Quit\n"); fclose(pf); }
 	}
 	SDL_Quit();
 	{
-		FILE *pf = fopen("pwrtrace.txt", "a");
+		FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
 		if (pf) { fprintf(pf, "arch_close done (exiting)\n"); fclose(pf); }
 	}
 }

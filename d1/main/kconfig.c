@@ -1882,7 +1882,7 @@ void kc_set_controls()
 void dbg_dump_joy(const char *tag)
 {
 	int i;
-	FILE *pf = fopen("pwrtrace.txt", "a");
+	FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
 	if (!pf) return;
 	fprintf(pf, "=== joy dump [%s] ===\n", tag);
 	fprintf(pf, "ControlType=0x%x JOY_bit=%d\n", (int)PlayerCfg.ControlType, (int)(PlayerCfg.ControlType & CONTROL_USING_JOYSTICK));

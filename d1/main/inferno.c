@@ -488,13 +488,13 @@ int main(int argc, char *argv[])
 	while (window_get_front())
 #endif
 	{
-		// v38 power-off trace: plain stdio (PHYSFS/gamelog gets corrupted at
-		// power-off). Confirms the main loop actually exits on power-off.
-#ifdef __3DS__
-		{ FILE *pf = fopen("pwrtrace.txt", "a"); if (pf) { fprintf(pf, "main loop exited (aptMainLoop false)\n"); fclose(pf); } }
-#endif
 		event_process();
 	}
+
+#ifdef __3DS__
+	// v38 power-off trace (logs ONCE on real loop exit, not per-frame).
+	{ FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a"); if (pf) { fprintf(pf, "MAIN LOOP EXITED (aptMainLoop false)\n"); fclose(pf); } }
+#endif
 
 	// Tidy up - avoids a crash on exit
 	{
