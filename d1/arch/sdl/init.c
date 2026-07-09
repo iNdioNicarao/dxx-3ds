@@ -18,12 +18,24 @@
 
 void arch_close(void)
 {
-	con_printf(CON_CRITICAL, "[PWR] arch_close entered\n");
+	// v38 power-off trace: write to a plain stdio file (NOT PHYSFS/gamelog,
+	// which gets locked/corrupted when the console is force-powered-off mid
+	// write). Each call opens+flushes+closes so the line survives a hang.
+	{
+		FILE *pf = fopen("pwrtrace.txt", "a");
+		if (pf) { fprintf(pf, "arch_close entered\n"); fclose(pf); }
+	}
 	songs_uninit();
-	con_printf(CON_CRITICAL, "[PWR] arch_close: songs_uninit done\n");
+	{
+		FILE *pf = fopen("pwrtrace.txt", "a");
+		if (pf) { fprintf(pf, "songs_uninit done\n"); fclose(pf); }
+	}
 
 	gr_close();
-	con_printf(CON_CRITICAL, "[PWR] arch_close: gr_close done\n");
+	{
+		FILE *pf = fopen("pwrtrace.txt", "a");
+		if (pf) { fprintf(pf, "gr_close done\n"); fclose(pf); }
+	}
 
 	if (!GameArg.CtlNoJoystick)
 		joy_close();
@@ -48,7 +60,15 @@ void arch_close(void)
 
 	key_close();
 
+	{
+		FILE *pf = fopen("pwrtrace.txt", "a");
+		if (pf) { fprintf(pf, "before SDL_Quit\n"); fclose(pf); }
+	}
 	SDL_Quit();
+	{
+		FILE *pf = fopen("pwrtrace.txt", "a");
+		if (pf) { fprintf(pf, "arch_close done (exiting)\n"); fclose(pf); }
+	}
 }
 
 void arch_init(void)

@@ -82,6 +82,14 @@ void show_framerate()
 	int y = GHEIGHT;
 	static fix64 fps_time = 0;
 
+	fps_count++;
+	if (timer_query() >= fps_time + F1_0)
+	{
+		fps_rate = fps_count;
+		fps_count = 0;
+		fps_time = timer_query();
+	}
+
 	// On the death screen the user wants the FPS readable, so use the large
 	// font and centre it near the top instead of the tiny top-right corner.
 	if (Player_is_dead)

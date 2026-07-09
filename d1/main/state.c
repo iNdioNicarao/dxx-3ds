@@ -1553,17 +1553,20 @@ RetryObjectLoading:
 		if (!window_is_visible(Game_wind))
 			window_set_visible(Game_wind, 1);
 #ifdef __3DS__
-	// After a quick-load the window/event stack was rebuilt mid-dispatch in a
-	// prior build, which left joystick input dead (only keyboard pulses
-	// survived). The menu-start path calls hide_menus() which CLOSES other
-	// windows so Game_wind becomes genuinely front; the in-game quick-load
-	// path (state_restore_all_sub -> StartNewLevelSub, no hide_menus) only
-	// re-shows Game_wind but leaves it BEHIND whatever window is on top, so
-	// joystick events route to the wrong window. Force Game_wind truly to the
-	// front (window_select, not just visible) and clear stuck key state.
-	key_flush();
-	if (Game_wind)
+	// After a quick-load the window/event stack was rebuilt, which left
+	// joystick input dead (only keyboard pulses survived). DXX gameplay
+	// input is POLLED from Joystick.button_state[] / Controls, not routed
+	// through windows, so the earlier window_select() fix was the wrong
+	// mechanism. The correct reset is game_flush_inputs() (game.c) which
+	// calls joy_flush()+key_flush()+memset(&Controls,0) -- clearing the
+	// stale polled state that survives a quick-load and breaks sticks/buttons.
+	// Also force Game_wind to the front (window_select) as belt-and-suspenders
+	// for any window-routed input, and re-show it.
+	game_flush_inputs();
+	if (Game_wind) {
+		window_set_visible(Game_wind, 1);
 		window_select(Game_wind);
+	}
 #endif
 	reset_time();
 
