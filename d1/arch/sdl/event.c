@@ -140,14 +140,14 @@ void event_poll()
 	// skips briefing screens (titles.c advances on KEY_ENTER) and opens the
 	// in-game pause/menu. Weapon cycle uses the standard Descent keys X/Y.
 	struct { u32 mask; int joy_btn; SDLKey menu_key; } btn_map[] = {
-		{ (1<<0),  0, SDLK_RETURN },  // A      -> Slide right (game) / Select (menu)
-		{ (1<<11), 3, SDLK_UNKNOWN },  // Y      -> Slide left
-		{ (1<<10), 2, SDLK_UNKNOWN },  // X      -> Accelerate
-		{ (1<<1),  1, SDLK_ESCAPE },   // B      -> Reverse (game) / Back (menu)
-		{ (1<<8),  5, SDLK_UNKNOWN },  // R      -> Fire primary
-		{ (1<<9),  6, SDLK_UNKNOWN },  // L      -> Drop bomb
-		{ (1<<15), 7, SDLK_UNKNOWN },  // ZR     -> Fire flare
-		{ (1<<14), 8, SDLK_UNKNOWN },  // ZL     -> Rear view
+		{ (1<<0),  0, SDLK_RETURN },  // A      -> Slide right (game) / Select (menu) [kc[7].value=0]
+		{ (1<<11), 3, SDLK_UNKNOWN },  // Y      -> Slide left  [kc[6].value=3]
+		{ (1<<10), 2, SDLK_UNKNOWN },  // X      -> Accelerate  [kc[2].value=2]
+		{ (1<<1),  1, SDLK_ESCAPE },   // B      -> Reverse (game) / Back (menu) [kc[3].value=1]
+		{ (1<<8),  5, SDLK_UNKNOWN },  // R      -> Fire primary [kc[0].value=5]
+		{ (1<<9),  6, SDLK_UNKNOWN },  // L      -> Drop bomb  [kc[6]? see dump; 6 used as in original]
+		{ (1<<15), 7, SDLK_UNKNOWN },  // ZR     -> Fire flare  [kc[4].value=7]
+		{ (1<<14), 8, SDLK_UNKNOWN },  // ZL     -> Rear view   [kc[7]? original 8]
 		{ (1<<6), 12, SDLK_UP    },    // D-UP   -> Slide up (vertical) / menu up
 		{ (1<<7), 13, SDLK_DOWN  },    // D-DOWN -> Slide down (vertical) / menu down
 		{ (1<<4), -1, SDLK_RIGHT },    // D-RIGHT-> Next weapon (keys X) / menu right

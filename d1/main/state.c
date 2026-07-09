@@ -1574,6 +1574,12 @@ RetryObjectLoading:
 	if (ConsoleObject)
 		ConsoleObject->control_type = CT_FLYING;
 	Player_is_dead = 0;
+	// v38g FIX: slide_on has NO bound button on 3DS (kc[5]=255), so it can
+	// only be enabled by init. game_flush_inputs() zeroes Controls.slide_on_state,
+	// which kills A/Y strafe after quick-load (the toggle is unbound, can't
+	// re-enable). A new game works because StartNewLevel leaves slide_on=1.
+	// Replicate that here so in-game quick-load matches new-game input.
+	Controls.slide_on_state = 1;
 	if (Game_wind) {
 		window_set_visible(Game_wind, 1);
 		window_select(Game_wind);
