@@ -24,6 +24,7 @@ extern void key_handler(SDL_KeyboardEvent *event);
 extern void mouse_button_handler(SDL_MouseButtonEvent *mbe);
 extern void mouse_motion_handler(SDL_MouseMotionEvent *mme);
 extern void mouse_cursor_autohide();
+extern void benchmark_toggle(void);
 extern int state_quick_save(void);
 extern int state_quick_load(void);
 extern int Automap_active;
@@ -186,6 +187,8 @@ void event_poll()
 						cycle_cockpit_next();
 					else if (current_keys & (1<<9))	// START + L = prev view
 						cycle_cockpit_prev();
+					else if (current_keys & (1<<14))	// START + ZL = toggle benchmark
+						benchmark_toggle();
 						}
 						}
 						}

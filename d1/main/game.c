@@ -1271,8 +1271,28 @@ void GameProcessFrame(void)
 		if ( Endlevel_sequence || ((Control_center_destroyed) && (Countdown_seconds_left <= 1)) || // close menus when end of level...
 			(Automap_active && ((Player_is_dead != player_was_dead) || (Players[Player_num].shields<=0 && player_shields>0))) ) // close autmap when dying ...
 			game_leave_menus();
-	}
-}
+		}
+
+		#ifdef __3DS__
+		// Periodic flight-state trace (1 line/sec) to capture the RUNTIME
+		// input state after quick-load, since the restore-time dump looks fine.
+		{
+			static int ft_count = 0;
+			ft_count++;
+			if (ft_count >= 60) {
+				ft_count = 0;
+				FILE *ff = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
+				if (ff) {
+					fprintf(ff, "FLIGHT frame: control_type=%d slide_on=%d dead=%d automap=%d front=%d\n",
+						ConsoleObject ? ConsoleObject->control_type : -1,
+						Controls.slide_on_state, Player_is_dead, Automap_active,
+						window_get_front() != NULL);
+					fclose(ff);
+				}
+			}
+		}
+		#endif
+		}
 
 //	-----------------------------------------------------------------------------
 //	Fire Laser:  Registers a laser fire, and performs special stuff for the fusion

@@ -58,6 +58,18 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 int netplayerinfo_on=0;
 
+#ifdef __3DS__
+int benchmark_active = 0;
+static int bench_secs = 0, bench_min = 999, bench_max = 0, bench_sum = 0;
+void benchmark_toggle(void)
+{
+	benchmark_active = !benchmark_active;
+	if (benchmark_active) {
+		bench_secs = 0; bench_min = 999; bench_max = 0; bench_sum = 0;
+	}
+}
+#endif
+
 #ifdef NETWORK
 void game_draw_multi_message()
 {
@@ -88,6 +100,23 @@ void show_framerate()
 		fps_rate = fps_count;
 		fps_count = 0;
 		fps_time = timer_query();
+#ifdef __3DS__
+		if (benchmark_active) {
+			bench_secs++;
+			bench_sum += fps_rate;
+			if (fps_rate < bench_min) bench_min = fps_rate;
+			if (fps_rate > bench_max) bench_max = fps_rate;
+			FILE *bf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
+			if (bf) {
+				fprintf(bf, "BENCH sec=%d fps=%d min=%d max=%d avg=%d scene=%s%s\n",
+					bench_secs, fps_rate, bench_min, bench_max,
+					bench_secs ? bench_sum / bench_secs : 0,
+					Automap_active ? "automap" : "flight",
+					benchmark_active ? "" : " (stopped)");
+				fclose(bf);
+			}
+		}
+#endif
 	}
 
 	// On the death screen the user wants the FPS readable, so use the large
