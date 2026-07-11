@@ -1221,17 +1221,23 @@ int is_key_rotate_event(d_event *event) {
 }
 
 #ifdef __3DS__
-// Full input-subsystem dump ~2s after a quick-load (called from
-// event.c's dump_input_after_ql countdown). Shows what the
-// quick-load actually left the input in vs a fresh game.
+// Full input-subsystem dump ~2s after a quick-load. Prints to the
+// bottom-screen console (survives a hard power-off) AND the file.
 void dbg_dump_ql(void)
 {
-	FILE *df = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
-	if (!df) return;
-	fprintf(df, "QLDUMP slide_on=%d ctl_type=%d objnum=%d\n",
+	extern window *Game_wind;
+	int front_is_game = (window_get_front() == Game_wind) && (Game_wind != NULL);
+	char msg[160];
+	snprintf(msg, sizeof(msg),
+		"QLDUMP front==Game_wind=%d slide_on=%d ctl_type=%d objnum=%d",
+		front_is_game,
 		Controls.slide_on_state,
 		ConsoleObject ? ConsoleObject->control_type : -1,
 		Players[0].objnum);
+	con_printf(CON_URGENT, "%s\n", msg);
+	FILE *df = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
+	if (!df) return;
+	fprintf(df, "%s\n", msg);
 	fclose(df);
 }
 #endif
@@ -1244,6 +1250,18 @@ void kconfig_read_controls(d_event *event, int automap_flag)
 	if (observer && Current_obs_player != OBSERVER_PLAYER_ID) {
 		return;
 	}
+
+	// Drive the post-quick-load input dump (set in state_quick_load).
+	// Kept here (not event.c) so it works with the v40 event_poll we
+	// must use for reliable video.
+#ifdef __3DS__
+	extern int dump_input_after_ql;
+	if (dump_input_after_ql > 0) {
+		dump_input_after_ql--;
+		if (dump_input_after_ql == 0)
+			dbg_dump_ql();
+	}
+#endif
 
 	int i = 0, j = 0, speed_factor = (cheats.turbo || (observer && PlayerCfg.ObsTurbo))?2:1;
 	static fix64 mouse_delta_time = 0;
