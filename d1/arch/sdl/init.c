@@ -16,6 +16,18 @@
 #include "args.h"
 #include "config.h"
 
+#ifdef __3DS__
+// Power-off fix: set when the system is shutting down so arch_close can
+// skip the blocking GPU teardown (SDL_Quit -> gfxExit -> _queueWaitAndClear).
+static aptHookCookie d1x_apt_cookie;
+static volatile int d1x_powering_off = 0;
+static void d1x_apt_hook(APT_HookType type, void *param)
+{
+	if (type == APTHOOK_ONEXIT)
+		d1x_powering_off = 1;
+}
+#endif
+
 void arch_close(void)
 {
 	// v38 power-off trace: write to a plain stdio file (NOT PHYSFS/gamelog,
@@ -64,6 +76,13 @@ void arch_close(void)
 		FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
 		if (pf) { fprintf(pf, "before SDL_Quit\n"); fclose(pf); }
 	}
+#ifdef __3DS__
+	// Power-off fix: on APTHOOK_ONEXIT the display is already off and
+	// SDL_Quit() -> gfxExit() blocks forever in _queueWaitAndClear().
+	// Skip it; the OS reclaims the GPU. On a normal (HOME) exit the
+	// display is still on, so run the normal teardown.
+	if (!d1x_powering_off)
+#endif
 	SDL_Quit();
 	{
 		FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
@@ -96,6 +115,18 @@ void arch_init(void)
 
 	if ((t = gr_init(0)) != 0)
 		Error(TXT_CANT_INIT_GFX,t);
+
+#ifdef __3DS__
+	// Power-off fix: when the system is shutting down (APTHOOK_ONEXIT),
+	// libctru's gfxExit() (reached via SDL_Quit) blocks forever in
+	// _queueWaitAndClear() waiting for the GPU queue to drain -- but the
+	// display is already off, so it never completes. The console then
+	// hangs on two black screens (status lights stuck on) until a hard
+	// power-off. We detect the exit and skip the blocking GPU teardown;
+	// the OS reclaims the GPU regardless. Normal teardown (config save,
+	// gr_close) still runs beforehand.
+	aptHook(&d1x_apt_cookie, d1x_apt_hook, NULL);
+#endif
 
 	atexit(arch_close);
 }
