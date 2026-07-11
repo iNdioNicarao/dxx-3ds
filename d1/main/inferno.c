@@ -34,6 +34,7 @@ char copyright[] = "DESCENT   COPYRIGHT (C) 1994,1995 PARALLAX SOFTWARE CORPORAT
 #ifdef __3DS__
 #include <3ds.h>
 extern int d1x_powering_off;
+extern void pglSetPoweredOff(void);
 
 const unsigned int __stacksize__ = 8 * 1024 * 1024; // 8MB
 
@@ -496,12 +497,21 @@ int main(int argc, char *argv[])
 	// Power-off trace: confirms the main loop actually exited (aptMainLoop
 	// returned false) vs. hanging inside the loop. Logs ONCE on real exit.
 	{ FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a"); if (pf) { fprintf(pf, "MAIN LOOP EXITED (aptMainLoop false)\n"); fclose(pf); } }
-	// Graceful power-off: tell arch_close (atexit) to bail out entirely so
-	// it never touches the dead GPU/SD, then return. libctru's appExit()
-	// (run automatically when main returns) calls aptExit() ONCE for us --
-	// we must NOT call aptExit() ourselves or it runs twice and crashes
-	// (ARM11 exception). The OS reclaims all resources after the clean exit.
-	d1x_powering_off = 1;
+	// Graceful power-off. The crash dump (ARM11 data abort at PC in
+	// syncArbitrateAddress, LR in gspWaitForEvent, SP/FAR in DSP memory
+	// 0x08800000+) proved the failure: libctru's GSP service thread is
+	// still blocked in gspWaitForEvent with its stack in DSP/shared memory
+	// when the OS unmaps that memory at power-off. To exit cleanly we must
+	// stop that thread, which gfxExit() does (it signals & joins the GSP
+	// thread). But gfxExit() -> pglExit() -> _queueWaitAndClear() would
+	// BLOCK forever waiting for a GPU queue that will never drain once the
+	// display is off. So: tell picaGL power-off is happening (so its queue
+	// wait is skipped), then gfxExit() joins the GSP thread, then return.
+	// libctru's appExit() calls aptExit() once for us on return. arch_close
+	// (atexit) bails via d1x_powering_off so it does not double-call
+	// gfxExit or touch the dead audio/DSP.
+	pglSetPoweredOff();
+	gfxExit();
 	return 0;
 #else
 	// Tidy up - avoids a crash on exit
