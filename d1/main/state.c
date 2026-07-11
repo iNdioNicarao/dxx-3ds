@@ -878,8 +878,11 @@ int state_quick_load(void)
 	}
 	HUD_init_message_literal(HM_DEFAULT, "Game loaded (quick)");
 #ifdef __3DS__
-	// Trigger a one-shot full input-state dump ~2s later (see event.c)
-	// so we can see what the quick-load left the input subsystem in.
+	// Immediate dump at QL success (joystick source state right now)...
+	extern void dbg_dump_ql(void);
+	dbg_dump_ql();
+	// ...and a second one ~2s later (see kconfig.c countdown) to catch
+	// any change once the restored level is fully running.
 	extern int dump_input_after_ql;
 	dump_input_after_ql = 120;
 #endif

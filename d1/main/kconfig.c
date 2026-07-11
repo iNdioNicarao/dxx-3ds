@@ -1221,19 +1221,25 @@ int is_key_rotate_event(d_event *event) {
 }
 
 #ifdef __3DS__
-// Full input-subsystem dump ~2s after a quick-load. Prints to the
-// bottom-screen console (survives a hard power-off) AND the file.
+// Full input-subsystem dump ~2s after a quick-load (and immediately at
+// QL success). Prints to the bottom-screen console (survives a hard
+// power-off) AND the file. Captures joystick AXIS values + button
+// states so we can see if the joystick event source is alive post-QL.
 void dbg_dump_ql(void)
 {
 	extern window *Game_wind;
 	int front_is_game = (window_get_front() == Game_wind) && (Game_wind != NULL);
-	char msg[160];
+	char msg[200];
 	snprintf(msg, sizeof(msg),
-		"QLDUMP front==Game_wind=%d slide_on=%d ctl_type=%d objnum=%d",
+		"QLDUMP front=%d slide_on=%d ctl=%d obj=%d | axes=%d,%d,%d,%d | fire=%d slideL=%d slideR=%d",
 		front_is_game,
 		Controls.slide_on_state,
 		ConsoleObject ? ConsoleObject->control_type : -1,
-		Players[0].objnum);
+		Players[0].objnum,
+		Controls.joy_axis[0], Controls.joy_axis[1],
+		Controls.joy_axis[2], Controls.joy_axis[3],
+		Controls.fire_primary_state,
+		Controls.btn_slide_left_state, Controls.btn_slide_right_state);
 	con_printf(CON_URGENT, "%s\n", msg);
 	FILE *df = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
 	if (!df) return;
