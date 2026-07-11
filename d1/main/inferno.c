@@ -425,14 +425,21 @@ int main(int argc, char *argv[])
 
 	show_titles();
 #ifdef __3DS__
+	{ FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a"); if (pf) { fprintf(pf, "STEP5 show_titles done\n"); fclose(pf); } }
 	printf("Step 5: show_titles finished\n");
 	svcSleepThread(2000000000LL);
 #endif
 
 	set_screen_mode(SCREEN_MENU);
+#ifdef __3DS__
+	{ FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a"); if (pf) { fprintf(pf, "STEP6 set_screen_mode(MENU) done\n"); fclose(pf); } }
+#endif
 
 	con_printf( CON_DEBUG, "\nDoing gamedata_init...\n" );
 	gamedata_init();
+#ifdef __3DS__
+	{ FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a"); if (pf) { fprintf(pf, "STEP7 gamedata_init done\n"); fclose(pf); } }
+#endif
 
 	if (GameArg.DbgNoRun)
 		return(0);
@@ -442,6 +449,9 @@ int main(int argc, char *argv[])
 
 	con_printf( CON_DEBUG, "\nRunning game...\n" );
 	init_game();
+#ifdef __3DS__
+	{ FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a"); if (pf) { fprintf(pf, "STEP8 init_game done\n"); fclose(pf); } }
+#endif
 
 	Players[Player_num].callsign[0] = '\0';
 
