@@ -66,6 +66,9 @@ void benchmark_toggle(void)
 	benchmark_active = !benchmark_active;
 	if (benchmark_active) {
 		bench_secs = 0; bench_min = 999; bench_max = 0; bench_sum = 0;
+		HUD_init_message_literal(HM_DEFAULT, "Benchmark ON (START+ZL to stop)");
+	} else {
+		HUD_init_message_literal(HM_DEFAULT, "Benchmark OFF");
 	}
 }
 #endif

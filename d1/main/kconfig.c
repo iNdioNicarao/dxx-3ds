@@ -1244,6 +1244,16 @@ void kconfig_read_controls(d_event *event, int automap_flag)
 
 	Controls.pitch_time = Controls.vertical_thrust_time = Controls.heading_time = Controls.sideways_thrust_time = Controls.bank_time = Controls.forward_thrust_time = 0;
 
+#ifdef __3DS__
+	// On 3DS the slide-on toggle is UNBOUND (kc[5]=255), so there is
+	// no button to enable slide mode. The control scheme (see show_controls_3ds)
+	// REQUIRES slide_on for the C-Stick + A/Y to strafe. Force it ON every
+	// frame so per-frame memset(&Controls,0) (game_flush_inputs) and the
+	// save-restore path can never leave it 0. This is what a new game
+	// effectively ends up with, and it makes in-game quick-load match it.
+	Controls.slide_on_state = 1;
+#endif
+
 	switch (event->type)
 	{
 		case EVENT_KEY_COMMAND:
