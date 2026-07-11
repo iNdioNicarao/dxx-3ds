@@ -191,39 +191,25 @@ void event_poll()
 				else if (btn_map[i].mask == (1<<7)) {	// D-DOWN = next cockpit
 					cycle_cockpit_next(); idle = 0; continue;
 				}
-				// START held: R/L also cycle cockpit (alternate binding),
-				// X=quick save, Y=quick load, SELECT=controls, ZL=benchmark.
-				else if (btn_map[i].mask == (1<<3)) {
-					if (current_keys & (1<<8))		// START + R = next view
-						cycle_cockpit_next();
-					else if (current_keys & (1<<9))	// START + L = prev view
-						cycle_cockpit_prev();
-					else if (current_keys & (1<<14))	// START + ZL = toggle benchmark
-						benchmark_toggle();
-					else if (current_keys & (1<<10))	// START + X = quick save
-						pending_quick_save = 1;
-					else if (current_keys & (1<<11))	// START + Y = quick load
-						pending_quick_load = 1;
-					else if (current_keys & (1<<2))	// START + SELECT = controls
-						show_controls_3ds();
-					else
-						send_key_pulse(SDLK_ESCAPE);
-					idle = 0;
-				}
 				}
 
 				for (int i = 0; btn_map[i].mask != 0; i++) {
 				if (kDown & btn_map[i].mask) {
-					// On the automap, L=zoom in (F9), B=zoom out (F10),
-					// R is unused there, A=back out. In other modal maps
-					// the same repurposing applies.
-					if (Automap_active && (btn_map[i].mask == (1<<9))) {	// L
-						send_key_pulse(SDLK_F9); idle = 0; continue;
-					}
-					if (Automap_active && (btn_map[i].mask == (1<<1))) {	// B = zoom OUT
-						send_key_pulse(SDLK_F10); idle = 0; continue;
-					}
-					if (Automap_active && (btn_map[i].mask == (1<<8))) {	// R (unused in map)
+					// Automap zoom is driven by accelerate/reverse thrust
+					// (viewDist -= forward_thrust). X = accelerate = zoom in,
+					// B = reverse = zoom out -- the SAME mechanism, so both
+					// zoom evenly. B normally also pulses Escape (menu_key),
+					// which would close the map; suppress that here so B
+					// zooms out instead. SELECT still exits the map.
+					if (Automap_active && (btn_map[i].mask == (1<<1))) {	// B = zoom out (reverse)
+						if (btn_map[i].joy_btn != -1) {
+							SDL_JoyButtonEvent jbe;
+							jbe.type = SDL_JOYBUTTONDOWN;
+							jbe.which = 0;
+							jbe.button = btn_map[i].joy_btn;
+							jbe.state = SDL_PRESSED;
+							joy_button_handler(&jbe);
+						}
 						idle = 0; continue;
 					}
 			}
