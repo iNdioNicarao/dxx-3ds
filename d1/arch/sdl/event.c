@@ -39,6 +39,9 @@ extern int dump_input_after_ql;
 // abort confirm box) can pause the main loop and starve our keyup -- leaving
 // the key "stuck down" and swallowing the next press. Pulsing avoids that.
 static void send_key_pulse(SDLKey sym) {
+#ifdef __3DS__
+	{ FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a"); if (pf) { fprintf(pf, "PULSE key=%d\n", (int)sym); fclose(pf); } }
+#endif
 	SDL_KeyboardEvent d, r;
 	d.type = SDL_KEYDOWN; d.state = SDL_PRESSED;
 	d.keysym.scancode = 0; d.keysym.sym = sym; d.keysym.unicode = 0;
