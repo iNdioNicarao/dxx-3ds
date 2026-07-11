@@ -33,6 +33,7 @@ char copyright[] = "DESCENT   COPYRIGHT (C) 1994,1995 PARALLAX SOFTWARE CORPORAT
 
 #ifdef __3DS__
 #include <3ds.h>
+extern int d1x_powering_off;
 
 const unsigned int __stacksize__ = 8 * 1024 * 1024; // 8MB
 
@@ -495,22 +496,14 @@ int main(int argc, char *argv[])
 	// Power-off trace: confirms the main loop actually exited (aptMainLoop
 	// returned false) vs. hanging inside the loop. Logs ONCE on real exit.
 	{ FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a"); if (pf) { fprintf(pf, "MAIN LOOP EXITED (aptMainLoop false)\n"); fclose(pf); } }
-	// On power-off the 3DS tears down the display asynchronously, so ANY
-	// teardown call (show_menus render, close_game, SDL_Quit->gfxExit, even
-	// the config SD-write) can block forever waiting on a display that's
-	// already gone. The hang point varied run-to-run (sometimes in
-	// show_menus, sometimes after WriteConfigFile), which is the signature
-	// of that race. The only reliable fix is to hard-exit the process here
-	// so the OS reclaims the GPU/FS and none of the teardown runs. Config
-	// is already persisted during play (WriteConfigFile is also called from
-	// the menus), so nothing important is lost.
-	// Call aptExit() FIRST to cleanly release the display/GPU; calling
-	// svcExitProcess() alone mid-render aborts on a live GPU and trips the
-	// "an error has occurred" exception screen. aptExit() hands the display
-	// back to the OS, then svcExitProcess() terminates without running the
-	// atexit chain (which would deadlock in SDL_Quit).
+	// Graceful power-off: tell arch_close (atexit) to bail out entirely so
+	// it never touches the dead GPU/SD, then release APT and return. The OS
+	// reclaims all resources. We deliberately do NOT call svcExitProcess()
+	// here -- aborting the process mid-render on a live GPU trips the
+	// "an error has occurred" exception screen.
+	d1x_powering_off = 1;
 	aptExit();
-	svcExitProcess();
+	return 0;
 #else
 	// Tidy up - avoids a crash on exit
 	{

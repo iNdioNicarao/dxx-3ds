@@ -20,7 +20,7 @@
 // Power-off fix: set when the system is shutting down so arch_close can
 // skip the blocking GPU teardown (SDL_Quit -> gfxExit -> _queueWaitAndClear).
 static aptHookCookie d1x_apt_cookie;
-static volatile int d1x_powering_off = 0;
+volatile int d1x_powering_off = 0;
 static void d1x_apt_hook(APT_HookType type, void *param)
 {
 	if (type == APTHOOK_ONEXIT) {
@@ -33,6 +33,18 @@ static void d1x_apt_hook(APT_HookType type, void *param)
 
 void arch_close(void)
 {
+#ifdef __3DS__
+	// Power-off: the display is already off, so EVERY teardown call
+	// (songs_uninit, gr_close, SDL_Quit->gfxExit, even the config SD
+	// write) can block forever or abort on the dead GPU. The OS reclaims
+	// all resources on process exit, so just bail. This is reached either
+	// via the APTHOOK_ONEXIT flag or via inferno.c setting the flag before
+	// returning. (We no longer svcExitProcess -- that aborts on the live
+	// GPU and trips the "an error has occurred" exception screen.)
+	if (d1x_powering_off)
+		return;
+#endif
+
 	// Power-off trace: each step opens+flushes+closes so the last line
 	// printed tells us exactly where the shutdown hangs.
 	{
