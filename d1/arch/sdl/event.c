@@ -185,10 +185,18 @@ void event_poll()
 				if (btn_map[i].mask == (1<<3)) {
 					if (current_keys & (1<<8))		// START + R = next view
 						cycle_cockpit_next();
-					else if (current_keys & (1<<9))	// START + L = prev view
+					else if (btn_map[i].mask == (1<<9))	// START + L = prev view
 						cycle_cockpit_prev();
-					else if (current_keys & (1<<14))	// START + ZL = toggle benchmark
+					else if (btn_map[i].mask == (1<<14))	// START + ZL = toggle benchmark
 						benchmark_toggle();
+					// Cockpit cycle via START + D-UP/D-DOWN (3DS d-pad).
+					// D-UP/D-DOWN are otherwise Slide up/down; under START
+					// they repurpose to cockpit prev/next, matching the
+					// desktop Descent "cycle cockpit" on arrow up/down.
+					else if (btn_map[i].mask == (1<<6))	// START + D-UP = prev cockpit
+						cycle_cockpit_prev();
+					else if (btn_map[i].mask == (1<<7))	// START + D-DOWN = next cockpit
+						cycle_cockpit_next();
 						}
 						}
 						}
