@@ -31,6 +31,7 @@ extern int Automap_active;
 extern void show_controls_3ds(void);
 extern void cycle_cockpit_next(void);
 extern void cycle_cockpit_prev(void);
+extern int in_game;
 
 // Emit a synthetic key as a clean pulse (down then up) so no key state lingers.
 // key_handler() keeps sticky keyd_pressed[] state, and modal dialogs (e.g. the
@@ -164,45 +165,49 @@ void event_poll()
 	// START+X = name-free quick save, START+Y = name-free quick load (no kbd).
 	for (int i = 0; btn_map[i].mask != 0; i++) {
 		if (kDown & btn_map[i].mask) {
-			if (btn_map[i].mask == (1<<3)) {
+			// Cockpit cycle: bare D-UP/D-DOWN (no START). Only in-game;
+			// in menus D-UP/D-DOWN fall through to navigation below.
+			if (btn_map[i].mask == (1<<6)) {		// D-UP = prev cockpit
+				if (in_game) { cycle_cockpit_prev(); idle = 0; continue; }
+			} else if (btn_map[i].mask == (1<<7)) {	// D-DOWN = next cockpit
+				if (in_game) { cycle_cockpit_next(); idle = 0; continue; }
+			} else if (btn_map[i].mask == (1<<3)) {	// START
 				if (current_keys & (1<<10))
 					pending_quick_save = 1;
 				else if (current_keys & (1<<11))
 					pending_quick_load = 1;
 				else if (current_keys & (1<<9))
 					show_controls_3ds();
+				else if (current_keys & (1<<14))	// START + ZL = toggle benchmark
+					benchmark_toggle();
 				else
 					send_key_pulse(SDLK_ESCAPE);
 				idle = 0;
-				} else if (btn_map[i].mask == (1<<4)) {
-					send_key_pulse(SDLK_x); idle = 0;
-				} else if (btn_map[i].mask == (1<<5)) {
-					send_key_pulse(SDLK_y); idle = 0;
-				}
-				// Cockpit view-cycle: hold START + tap R (next) / L (prev).
-				// SELECT alone stays Automap; SELECT+dpad is unused to avoid
-				// the automap-vs-cycle conflict.
-				if (btn_map[i].mask == (1<<3)) {
-					if (current_keys & (1<<8))		// START + R = next view
-						cycle_cockpit_next();
-					else if (current_keys & (1<<9))	// START + L = prev view
-						cycle_cockpit_prev();
-					else if (current_keys & (1<<14))	// START + ZL = toggle benchmark
-						benchmark_toggle();
-						}
-						}
-						}
+			} else if (btn_map[i].mask == (1<<4)) {
+				send_key_pulse(SDLK_x); idle = 0;
+			} else if (btn_map[i].mask == (1<<5)) {
+				send_key_pulse(SDLK_y); idle = 0;
+			}
+		}
+	}
 
 	for (int i = 0; btn_map[i].mask != 0; i++) {
 		if (kDown & btn_map[i].mask) {
-			// On the automap, L/R act as F9/F10 (zoom) instead of their
-			// gameplay actions (drop bomb / fire primary), which are unused
-			// in the modal map window.
-			if (Automap_active && (btn_map[i].mask == (1<<9))) {  // L
+			// On the automap: X = zoom in (F9), B = zoom out (F10),
+			// L = zoom in (F9). R is unused there. Suppress B's Escape
+			// (menu_key) via continue so it zooms instead of closing the
+			// map. SELECT still exits the map.
+			if (Automap_active && (btn_map[i].mask == (1<<10))) {	// X zoom in
 				send_key_pulse(SDLK_F9); idle = 0; continue;
 			}
-			if (Automap_active && (btn_map[i].mask == (1<<8))) {  // R
+			if (Automap_active && (btn_map[i].mask == (1<<1))) {	// B zoom out
 				send_key_pulse(SDLK_F10); idle = 0; continue;
+			}
+			if (Automap_active && (btn_map[i].mask == (1<<9))) {	// L zoom in
+				send_key_pulse(SDLK_F9); idle = 0; continue;
+			}
+			if (Automap_active && (btn_map[i].mask == (1<<8))) {	// R unused in map
+				idle = 0; continue;
 			}
 			if (btn_map[i].joy_btn != -1) {
 				SDL_JoyButtonEvent jbe;
