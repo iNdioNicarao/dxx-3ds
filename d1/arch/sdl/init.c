@@ -23,16 +23,18 @@ static aptHookCookie d1x_apt_cookie;
 static volatile int d1x_powering_off = 0;
 static void d1x_apt_hook(APT_HookType type, void *param)
 {
-	if (type == APTHOOK_ONEXIT)
+	if (type == APTHOOK_ONEXIT) {
 		d1x_powering_off = 1;
+		FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
+		if (pf) { fprintf(pf, "APTHOOK_ONEXIT fired (powering_off=1)\n"); fclose(pf); }
+	}
 }
 #endif
 
 void arch_close(void)
 {
-	// v38 power-off trace: write to a plain stdio file (NOT PHYSFS/gamelog,
-	// which gets locked/corrupted when the console is force-powered-off mid
-	// write). Each call opens+flushes+closes so the line survives a hang.
+	// Power-off trace: each step opens+flushes+closes so the last line
+	// printed tells us exactly where the shutdown hangs.
 	{
 		FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
 		if (pf) { fprintf(pf, "arch_close entered\n"); fclose(pf); }
@@ -54,15 +56,11 @@ void arch_close(void)
 
 	mouse_close();
 
-// aagallag: TODO -- Fix bug so we can gracefully exit
+// 3DS: power-off is handled by the APTHOOK_ONEXIT hook (arch_init) which
+// makes arch_close skip the blocking SDL_Quit GPU teardown, so the console
+// powers off cleanly instead of hanging on two black screens.
 #ifdef __3DS__
 	printf("Press the home button to exit... (power off will terminate the app)\n");
-	// NOTE: do NOT re-enter while(aptMainLoop()) here. The main loop
-	// (inferno.c) already gates on aptMainLoop() and returns when power-off /
-	// HOME is requested. Re-polling aptMainLoop() inside this atexit handler,
-	// after the display is already being torn down by the OS, deadlocks on a
-	// suspended GPU and leaves the console on two black screens (the
-	// "power-off hang"). Just release resources and let the process exit.
 #endif
 
 	if (!GameArg.SndNoSound)

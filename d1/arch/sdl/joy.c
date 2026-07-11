@@ -69,9 +69,6 @@ void joy_button_handler(SDL_JoyButtonEvent *jbe)
 	button = SDL_Joysticks[jbe->which].button_map[jbe->button];
 #endif
 
-#ifdef __3DS__
-	{ FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a"); if (pf) { fprintf(pf, "BTN button=%d state=%d\n", jbe->button, jbe->state); fclose(pf); } }
-#endif
 	Joystick.button_state[button] = jbe->state;
 
 	event.type = (jbe->type == SDL_JOYBUTTONDOWN) ? EVENT_JOYSTICK_BUTTON_DOWN : EVENT_JOYSTICK_BUTTON_UP;

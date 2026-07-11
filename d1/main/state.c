@@ -817,13 +817,6 @@ int state_save_all(int blind_save)
 	return rval;
 }
 
-#ifdef __3DS__
-// Global counter set by state_quick_load() on success; event_poll (event.c)
-// counts it down and calls dbg_dump_ql() once ~2s after a quick-load, so
-// we can see what the quick-load left the input subsystem in.
-int dump_input_after_ql = 0;
-#endif
-
 // 3DS: name-free manual save triggered by a button combo (START+X).
 // Writes to a fixed slot so no on-screen keyboard is needed.
 int state_quick_save(void)
@@ -908,15 +901,6 @@ int state_quick_load(void)
 	// move) while input/render of other windows still work. Re-show it.
 	if (Game_wind)
 		window_set_visible(Game_wind, 1);
-#ifdef __3DS__
-	// Immediate dump at QL success (joystick source state right now)...
-	extern void dbg_dump_ql(void);
-	dbg_dump_ql();
-	// ...and a second one ~2s later (see kconfig.c countdown) to catch
-	// any change once the restored level is fully running.
-	extern int dump_input_after_ql;
-	dump_input_after_ql = 120;
-#endif
 	return 1;
 }
 

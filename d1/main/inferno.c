@@ -492,7 +492,8 @@ int main(int argc, char *argv[])
 	}
 
 #ifdef __3DS__
-	// v38 power-off trace (logs ONCE on real loop exit, not per-frame).
+	// Power-off trace: confirms the main loop actually exited (aptMainLoop
+	// returned false) vs. hanging inside the loop. Logs ONCE on real exit.
 	{ FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a"); if (pf) { fprintf(pf, "MAIN LOOP EXITED (aptMainLoop false)\n"); fclose(pf); } }
 #endif
 
@@ -504,6 +505,10 @@ int main(int argc, char *argv[])
 		while ((wind = window_get_front()))
 			window_close(wind);
 	}
+
+#ifdef __3DS__
+	{ FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a"); if (pf) { fprintf(pf, "post-loop teardown done, entering arch_close\n"); fclose(pf); } }
+#endif
 
 	WriteConfigFile();
 	show_order_form();
