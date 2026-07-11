@@ -303,9 +303,15 @@ int main(int argc, char *argv[])
     mcuHwcInit();
 	hidInit();
     gfxInitDefault();
-	gfxSetScreenFormat(GFX_BOTTOM, GSP_RGB565_OES);
-	gfxSetDoubleBuffering(GFX_BOTTOM, false);
-	consoleInit(GFX_BOTTOM, &bottomScreen);
+    gfxSetScreenFormat(GFX_BOTTOM, GSP_RGB565_OES);
+    gfxSetDoubleBuffering(GFX_BOTTOM, false);
+    // The game renders to the TOP screen, but gfxInitDefault() leaves the
+    // top framebuffer in an occasionally-invalid default -- resulting in a
+    // blank top screen (logic/audio run, nothing draws). Explicitly configure
+    // BOTH screens so the top is always valid.
+    gfxSetScreenFormat(GFX_TOP, GSP_RGB565_OES);
+    gfxSetDoubleBuffering(GFX_TOP, true);
+    consoleInit(GFX_BOTTOM, &bottomScreen);
 
 	osSetSpeedupEnable(1); // Should get away with removing this
 #endif
