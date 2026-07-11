@@ -876,6 +876,27 @@ int state_quick_load(void)
 		start_time();
 		return 0;
 	}
+	// BUG FIX (quick-load can't fly -- THE root cause): state_quick_load
+	// calls stop_time() (sets time_paused=1) but on SUCCESS never calls
+	// start_time(). So time_paused stays 1 and GameProcessFrame (which
+	// contains read_flying_controls AND object_move_all) is skipped every
+	// frame -- the game renders and reads input, but the ship/bombs are
+	// frozen. Resume the simulation clock on success.
+	start_time();
+	// BUG FIX (quick-load can't fly): state_restore_all_sub overwrites
+	// PlayerCfg (incl. JoystickSens) from the save, which may hold stale
+	// /zero values (older builds wrote JoystickSens = 0). Force the
+	// sensitivities to a known-good value AFTER the restore so flight
+	// control math always produces non-zero output, regardless of what
+	// the save or on-disk .plr contains.
+	{
+		int i;
+		for (i = 0; i < 6; i++) {
+			PlayerCfg.JoystickSens[i] = 8;
+			PlayerCfg.JoystickDead[i] = 0;
+			PlayerCfg.JoystickUndercalibrate[i] = 0;
+		}
+	}
 	HUD_init_message_literal(HM_DEFAULT, "Game loaded (quick)");
 	// BUG FIX (quick-load input/sim freeze): state_restore_all_sub hides
 	// Game_wind (window_set_visible(Game_wind,0)) and StartNewLevelSub
