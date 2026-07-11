@@ -1451,7 +1451,6 @@ void kconfig_read_controls(d_event *event, int automap_flag)
 	}
 
 	//------------ Read pitch_time -----------
-	if ( !Controls.slide_on_state )
 	{
 		// From keyboard...
 		if ( Controls.key_pitch_forward_state ) 
@@ -1481,10 +1480,8 @@ void kconfig_read_controls(d_event *event, int automap_flag)
 		else
 			Controls.pitch_time += (Controls.mouse_axis[kc_mouse[13].value]*PlayerCfg.MouseSens[1])/8;
 	}
-	else Controls.pitch_time = 0;
 
 	//----------- Read vertical_thrust_time -----------------
-	if ( Controls.slide_on_state )
 	{
 		// From keyboard...
 		if ( Controls.key_pitch_forward_state ) 
@@ -1546,7 +1543,6 @@ void kconfig_read_controls(d_event *event, int automap_flag)
 		Controls.vertical_thrust_time -= (Controls.mouse_axis[kc_mouse[19].value]*PlayerCfg.MouseSens[3])/8;
 
 	//---------- Read heading_time -----------
-	if (!Controls.slide_on_state && !Controls.bank_on_state)
 	{
 		// From keyboard...
 		if ( Controls.key_heading_right_state ) 
@@ -1576,10 +1572,8 @@ void kconfig_read_controls(d_event *event, int automap_flag)
 		else
 			Controls.heading_time -= (Controls.mouse_axis[kc_mouse[15].value]*PlayerCfg.MouseSens[0])/8;
 	}
-	else Controls.heading_time = 0;
 
 	//----------- Read sideways_thrust_time -----------------
-	if ( Controls.slide_on_state )
 	{
 		// From keyboard...
 		if ( Controls.key_heading_right_state ) 
