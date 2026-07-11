@@ -49,6 +49,14 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "u_mem.h"
 #include "piggy.h"
 #include "timer.h"
+
+#ifdef __3DS__
+// Accumulated world-render time (fix64 ms) for the stereo-3D headroom
+// analysis in gamerend.c's benchmark. render_mine is the part that doubles
+// in stereo, so we time it here and the benchmark averages/prints it.
+extern int bench_world_acc;
+extern int benchmark_active;
+#endif
 #include "effects.h"
 #include "playsave.h"
 #ifdef OGL
@@ -1433,6 +1441,14 @@ void render_frame(fix eye_offset)
 		gr_clear_canvas(Clear_window_color);
 	}
 
+#ifdef __3DS__
+	if (benchmark_active) {
+		fix64 _t0 = timer_query();
+		render_mine(start_seg_num,eye_offset);
+		fix64 _dt = timer_query() - _t0;
+		bench_world_acc += f2i(fixmul(_dt, 1000));	// fix64 sec -> ms
+	} else
+#endif
 	render_mine(start_seg_num,eye_offset);
 
 	g3_end_frame();

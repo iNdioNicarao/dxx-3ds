@@ -61,6 +61,11 @@ int netplayerinfo_on=0;
 #ifdef __3DS__
 int benchmark_active = 0;
 static int bench_secs = 0, bench_min = 999, bench_max = 0, bench_sum = 0;
+// Phase timing for the stereo-3D headroom analysis: world geometry render
+// (render_mine) is the part that DOUBLES in stereo. Measured in fix64
+// milliseconds, accumulated per second so we can average and estimate 2*W.
+int bench_world_ms = 0;
+int bench_world_acc = 0;
 void benchmark_toggle(void)
 {
 	benchmark_active = !benchmark_active;
@@ -102,26 +107,28 @@ void show_framerate()
 	fps_count++;
 	if (timer_query() >= fps_time + F1_0)
 	{
-		fps_rate = fps_count;
-		fps_count = 0;
-		fps_time = timer_query();
-#ifdef __3DS__
-		if (benchmark_active) {
-			bench_secs++;
-			bench_sum += fps_rate;
-			if (fps_rate < bench_min) bench_min = fps_rate;
-			if (fps_rate > bench_max) bench_max = fps_rate;
-			FILE *bf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
-			if (bf) {
-				fprintf(bf, "BENCH sec=%d fps=%d min=%d max=%d avg=%d scene=%s%s\n",
-					bench_secs, fps_rate, bench_min, bench_max,
-					bench_secs ? bench_sum / bench_secs : 0,
-					Automap_active ? "automap" : "flight",
-					benchmark_active ? "" : " (stopped)");
-				fclose(bf);
-			}
+	fps_rate = fps_count;
+	fps_count = 0;
+	fps_time = timer_query();
+	#ifdef __3DS__
+	if (benchmark_active) {
+		bench_secs++;
+		bench_sum += fps_rate;
+		if (fps_rate < bench_min) bench_min = fps_rate;
+		if (fps_rate > bench_max) bench_max = fps_rate;
+		int world_avg = bench_world_acc / (fps_rate > 0 ? fps_rate : 1);
+		bench_world_acc = 0;
+		FILE *bf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
+		if (bf) {
+			fprintf(bf, "BENCH sec=%d fps=%d min=%d max=%d avg=%d scene=%s | world_ms=%d stereo_world_est_ms=%d\n",
+				bench_secs, fps_rate, bench_min, bench_max,
+				bench_secs ? bench_sum / bench_secs : 0,
+				Automap_active ? "automap" : "flight",
+				world_avg, world_avg * 2);
+			fclose(bf);
 		}
-#endif
+	}
+	#endif
 	}
 
 	// On the death screen the user wants the FPS readable, so use the large

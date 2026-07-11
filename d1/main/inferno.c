@@ -504,6 +504,12 @@ int main(int argc, char *argv[])
 	// so the OS reclaims the GPU/FS and none of the teardown runs. Config
 	// is already persisted during play (WriteConfigFile is also called from
 	// the menus), so nothing important is lost.
+	// Call aptExit() FIRST to cleanly release the display/GPU; calling
+	// svcExitProcess() alone mid-render aborts on a live GPU and trips the
+	// "an error has occurred" exception screen. aptExit() hands the display
+	// back to the OS, then svcExitProcess() terminates without running the
+	// atexit chain (which would deadlock in SDL_Quit).
+	aptExit();
 	svcExitProcess();
 #else
 	// Tidy up - avoids a crash on exit
