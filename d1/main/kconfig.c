@@ -1236,7 +1236,7 @@ void dbg_dump_ql(void)
 	int cobj_match = (ConsoleObject == pobj);
 	char msg[320];
 	snprintf(msg, sizeof(msg),
-		"QLDUMP front=%d slide_on=%d ctl=%d obj=%d | axes=%d,%d,%d,%d | fire=%d slL=%d slR=%d | sens=%d,%d,%d,%d | h=%d p=%d sw=%d | cobj=%p pobj=%p match=%d cseg=%d pseg=%d",
+		"QLDUMP front=%d slide_on=%d ctl=%d obj=%d | axes=%d,%d,%d,%d | fire=%d slL=%d slR=%d | sens=%d,%d,%d,%d | h=%d p=%d sw=%d | cobj=%p pobj=%p match=%d cseg=%d pseg=%d mt=%d",
 		front_is_game,
 		Controls.slide_on_state,
 		ConsoleObject ? ConsoleObject->control_type : -1,
@@ -1250,7 +1250,8 @@ void dbg_dump_ql(void)
 		Controls.heading_time, Controls.pitch_time, Controls.sideways_thrust_time,
 		(void *)ConsoleObject, (void *)pobj, cobj_match,
 		ConsoleObject ? ConsoleObject->segnum : -1,
-		pobj ? pobj->segnum : -1);
+		pobj ? pobj->segnum : -1,
+		ConsoleObject ? ConsoleObject->movement_type : -1);
 	con_printf(CON_URGENT, "%s\n", msg);
 	FILE *df = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
 	if (!df) return;
