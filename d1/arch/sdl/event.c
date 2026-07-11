@@ -342,12 +342,18 @@ void event_process(void)
 	// so state_restore_all_sub()/state_save_all_sub() never run mid-dispatch
 	// inside the poll loop (which corrupted the window/event stack and broke
 	// input after a quick-load).
+	int did_ql = pending_quick_save || pending_quick_load;
 	if (pending_quick_save) { pending_quick_save = 0; state_quick_save(); }
 	if (pending_quick_load) { pending_quick_load = 0; state_quick_load(); }
 
 	// Doing this prevents problems when a draw event can create a newmenu,
-	// such as some network menus when they report a problem
-	if (window_get_front() != wind)
+	// such as some network menus when they report a problem. But after a
+	// quick-load/quick-save the front window legitimately changed (the level
+	// was rebuilt by StartNewLevelSub, which hides Game_wind), so we must NOT
+	// skip the draw -- otherwise EVENT_WINDOW_DRAW is never dispatched and the
+	// simulation (object_move_all in GameProcessFrame) freezes. The ship you
+	// see is just the last rendered frame on the framebuffer.
+	if (window_get_front() != wind && !did_ql)
 		return;
 	
 	event.type = EVENT_WINDOW_DRAW;	// then draw all visible windows

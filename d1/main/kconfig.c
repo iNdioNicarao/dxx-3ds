@@ -1230,33 +1230,36 @@ int is_key_rotate_event(d_event *event) {
 // actual object slot to confirm.
 void dbg_dump_ql(void)
 {
-	extern window *Game_wind;
-	int front_is_game = (window_get_front() == Game_wind) && (Game_wind != NULL);
-	object *pobj = &Objects[Players[Player_num].objnum];
-	int cobj_match = (ConsoleObject == pobj);
-	char msg[320];
-	snprintf(msg, sizeof(msg),
-		"QLDUMP front=%d slide_on=%d ctl=%d obj=%d | axes=%d,%d,%d,%d | fire=%d slL=%d slR=%d | sens=%d,%d,%d,%d | h=%d p=%d sw=%d | cobj=%p pobj=%p match=%d cseg=%d pseg=%d mt=%d",
-		front_is_game,
-		Controls.slide_on_state,
-		ConsoleObject ? ConsoleObject->control_type : -1,
-		Players[0].objnum,
-		Controls.joy_axis[0], Controls.joy_axis[1],
-		Controls.joy_axis[2], Controls.joy_axis[3],
-		Controls.fire_primary_state,
-		Controls.btn_slide_left_state, Controls.btn_slide_right_state,
-		PlayerCfg.JoystickSens[0], PlayerCfg.JoystickSens[1],
-		PlayerCfg.JoystickSens[2], PlayerCfg.JoystickSens[3],
-		Controls.heading_time, Controls.pitch_time, Controls.sideways_thrust_time,
-		(void *)ConsoleObject, (void *)pobj, cobj_match,
-		ConsoleObject ? ConsoleObject->segnum : -1,
-		pobj ? pobj->segnum : -1,
-		ConsoleObject ? ConsoleObject->movement_type : -1);
-	con_printf(CON_URGENT, "%s\n", msg);
-	FILE *df = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
-	if (!df) return;
-	fprintf(df, "%s\n", msg);
-	fclose(df);
+extern window *Game_wind;
+int front_is_game = (window_get_front() == Game_wind) && (Game_wind != NULL);
+object *pobj = &Objects[Players[Player_num].objnum];
+int cobj_match = (ConsoleObject == pobj);
+int gwnull = (Game_wind == NULL);
+int gwvis = gwnull ? -1 : window_is_visible(Game_wind);
+char msg[384];
+snprintf(msg, sizeof(msg),
+	"QLDUMP front=%d slide_on=%d ctl=%d obj=%d | axes=%d,%d,%d,%d | fire=%d slL=%d slR=%d | sens=%d,%d,%d,%d | h=%d p=%d sw=%d | cobj=%p pobj=%p match=%d cseg=%d pseg=%d mt=%d | GWnull=%d GWvis=%d",
+	front_is_game,
+	Controls.slide_on_state,
+	ConsoleObject ? ConsoleObject->control_type : -1,
+	Players[0].objnum,
+	Controls.joy_axis[0], Controls.joy_axis[1],
+	Controls.joy_axis[2], Controls.joy_axis[3],
+	Controls.fire_primary_state,
+	Controls.btn_slide_left_state, Controls.btn_slide_right_state,
+	PlayerCfg.JoystickSens[0], PlayerCfg.JoystickSens[1],
+	PlayerCfg.JoystickSens[2], PlayerCfg.JoystickSens[3],
+	Controls.heading_time, Controls.pitch_time, Controls.sideways_thrust_time,
+	(void *)ConsoleObject, (void *)pobj, cobj_match,
+	ConsoleObject ? ConsoleObject->segnum : -1,
+	pobj ? pobj->segnum : -1,
+	ConsoleObject ? ConsoleObject->movement_type : -1,
+	gwnull, gwvis);
+con_printf(CON_URGENT, "%s\n", msg);
+FILE *df = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
+if (!df) return;
+fprintf(df, "%s\n", msg);
+fclose(df);
 }
 #endif
 
