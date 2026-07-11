@@ -31,17 +31,12 @@ extern int Automap_active;
 extern void show_controls_3ds(void);
 extern void cycle_cockpit_next(void);
 extern void cycle_cockpit_prev(void);
-extern void dbg_dump_ql(void);	// kconfig.c: full input-state dump after quick-load
-extern int dump_input_after_ql;
 
 // Emit a synthetic key as a clean pulse (down then up) so no key state lingers.
 // key_handler() keeps sticky keyd_pressed[] state, and modal dialogs (e.g. the
 // abort confirm box) can pause the main loop and starve our keyup -- leaving
 // the key "stuck down" and swallowing the next press. Pulsing avoids that.
 static void send_key_pulse(SDLKey sym) {
-#ifdef __3DS__
-	{ FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a"); if (pf) { fprintf(pf, "PULSE key=%d\n", (int)sym); fclose(pf); } }
-#endif
 	SDL_KeyboardEvent d, r;
 	d.type = SDL_KEYDOWN; d.state = SDL_PRESSED;
 	d.keysym.scancode = 0; d.keysym.sym = sym; d.keysym.unicode = 0;
@@ -184,37 +179,30 @@ void event_poll()
 				} else if (btn_map[i].mask == (1<<5)) {
 					send_key_pulse(SDLK_y); idle = 0;
 				}
-				// Cockpit cycle: bare D-UP/D-DOWN (no START). The user does
-				// not use d-pad up/down for movement (C-Stick slides), so
-				// repurpose them to cycle the cockpit, matching desktop
-				// Descent's arrow up/down "cycle cockpit" behaviour.
-				else if (btn_map[i].mask == (1<<6)) {	// D-UP = prev cockpit
-					cycle_cockpit_prev(); idle = 0; continue;
-				}
-				else if (btn_map[i].mask == (1<<7)) {	// D-DOWN = next cockpit
-					cycle_cockpit_next(); idle = 0; continue;
-				}
-				}
-
-				for (int i = 0; btn_map[i].mask != 0; i++) {
-				if (kDown & btn_map[i].mask) {
-					// Automap zoom is driven by accelerate/reverse thrust
-					// (viewDist -= forward_thrust). X = accelerate = zoom in,
-					// B = reverse = zoom out -- the SAME mechanism, so both
-					// zoom evenly. B normally also pulses Escape (menu_key),
-					// which would close the map; suppress that here so B
-					// zooms out instead. SELECT still exits the map.
-					if (Automap_active && (btn_map[i].mask == (1<<1))) {	// B = zoom out (reverse)
-						if (btn_map[i].joy_btn != -1) {
-							SDL_JoyButtonEvent jbe;
-							jbe.type = SDL_JOYBUTTONDOWN;
-							jbe.which = 0;
-							jbe.button = btn_map[i].joy_btn;
-							jbe.state = SDL_PRESSED;
-							joy_button_handler(&jbe);
+				// Cockpit view-cycle: hold START + tap R (next) / L (prev).
+				// SELECT alone stays Automap; SELECT+dpad is unused to avoid
+				// the automap-vs-cycle conflict.
+				if (btn_map[i].mask == (1<<3)) {
+					if (current_keys & (1<<8))		// START + R = next view
+						cycle_cockpit_next();
+					else if (current_keys & (1<<9))	// START + L = prev view
+						cycle_cockpit_prev();
+					else if (current_keys & (1<<14))	// START + ZL = toggle benchmark
+						benchmark_toggle();
 						}
-						idle = 0; continue;
-					}
+						}
+						}
+
+	for (int i = 0; btn_map[i].mask != 0; i++) {
+		if (kDown & btn_map[i].mask) {
+			// On the automap, L/R act as F9/F10 (zoom) instead of their
+			// gameplay actions (drop bomb / fire primary), which are unused
+			// in the modal map window.
+			if (Automap_active && (btn_map[i].mask == (1<<9))) {  // L
+				send_key_pulse(SDLK_F9); idle = 0; continue;
+			}
+			if (Automap_active && (btn_map[i].mask == (1<<8))) {  // R
+				send_key_pulse(SDLK_F10); idle = 0; continue;
 			}
 			if (btn_map[i].joy_btn != -1) {
 				SDL_JoyButtonEvent jbe;
@@ -268,18 +256,6 @@ void event_poll()
 			old_axes[i] = val;
 			idle = 0;
 		}
-	}
-#endif
-
-#ifdef __3DS__
-	// One-shot input-state dump ~2s after a quick-load (dump_input_after_ql
-	// counts down ~120 frames). Calls dbg_dump_ql() in kconfig.c, which
-	// captures the full input subsystem so we see what the quick-load
-	// actually left dead (vs a fresh game), instead of guessing slide_on.
-	if (dump_input_after_ql > 0) {
-		dump_input_after_ql--;
-		if (dump_input_after_ql == 0)
-			dbg_dump_ql();
 	}
 #endif
 
