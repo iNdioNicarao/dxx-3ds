@@ -497,12 +497,11 @@ int main(int argc, char *argv[])
 	// returned false) vs. hanging inside the loop. Logs ONCE on real exit.
 	{ FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a"); if (pf) { fprintf(pf, "MAIN LOOP EXITED (aptMainLoop false)\n"); fclose(pf); } }
 	// Graceful power-off: tell arch_close (atexit) to bail out entirely so
-	// it never touches the dead GPU/SD, then release APT and return. The OS
-	// reclaims all resources. We deliberately do NOT call svcExitProcess()
-	// here -- aborting the process mid-render on a live GPU trips the
-	// "an error has occurred" exception screen.
+	// it never touches the dead GPU/SD, then return. libctru's appExit()
+	// (run automatically when main returns) calls aptExit() ONCE for us --
+	// we must NOT call aptExit() ourselves or it runs twice and crashes
+	// (ARM11 exception). The OS reclaims all resources after the clean exit.
 	d1x_powering_off = 1;
-	aptExit();
 	return 0;
 #else
 	// Tidy up - avoids a crash on exit
