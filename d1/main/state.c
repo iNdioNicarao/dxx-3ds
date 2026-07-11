@@ -877,6 +877,16 @@ int state_quick_load(void)
 		return 0;
 	}
 	HUD_init_message_literal(HM_DEFAULT, "Game loaded (quick)");
+	// BUG FIX (quick-load input/sim freeze): state_restore_all_sub hides
+	// Game_wind (window_set_visible(Game_wind,0)) and StartNewLevelSub
+	// only re-runs game()/game_setup() when Game_wind is NULL. During a
+	// quick-load we are already in-game, so Game_wind is non-NULL and the
+	// window stays HIDDEN. The event loop only dispatches EVENT_WINDOW_DRAW
+	// (-> GameProcessFrame -> object_move_all) to VISIBLE windows, so with
+	// Game_wind hidden the whole simulation freezes (ship + bombs don't
+	// move) while input/render of other windows still work. Re-show it.
+	if (Game_wind)
+		window_set_visible(Game_wind, 1);
 #ifdef __3DS__
 	// Immediate dump at QL success (joystick source state right now)...
 	extern void dbg_dump_ql(void);
