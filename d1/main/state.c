@@ -817,6 +817,13 @@ int state_save_all(int blind_save)
 	return rval;
 }
 
+#ifdef __3DS__
+// Global counter set by state_quick_load() on success; event_poll (event.c)
+// counts it down and calls dbg_dump_ql() once ~2s after a quick-load, so
+// we can see what the quick-load left the input subsystem in.
+int dump_input_after_ql = 0;
+#endif
+
 // 3DS: name-free manual save triggered by a button combo (START+X).
 // Writes to a fixed slot so no on-screen keyboard is needed.
 int state_quick_save(void)
@@ -870,6 +877,12 @@ int state_quick_load(void)
 		return 0;
 	}
 	HUD_init_message_literal(HM_DEFAULT, "Game loaded (quick)");
+#ifdef __3DS__
+	// Trigger a one-shot full input-state dump ~2s later (see event.c)
+	// so we can see what the quick-load left the input subsystem in.
+	extern int dump_input_after_ql;
+	dump_input_after_ql = 120;
+#endif
 	return 1;
 }
 
@@ -1577,6 +1590,9 @@ RetryObjectLoading:
 	// v38g FIX: slide_on has NO bound button on 3DS (kc[5]=255), so it can
 	// only be enabled by init. game_flush_inputs() zeroes Controls.slide_on_state,
 	// which kills A/Y strafe after quick-load (the toggle is unbound, can't
+	// v38g FIX: slide_on has NO bound button on 3DS (kc[5]=255), so it can
+	// only be enabled by init. game_flush_inputs() zeroes Controls.slide_on_state,
+	// which kills A/Y strafe after quick-load (the toggle is unbound, can't
 	// re-enable). A new game works because StartNewLevel leaves slide_on=1.
 	// Replicate that here so in-game quick-load matches new-game input.
 	Controls.slide_on_state = 1;
@@ -1586,7 +1602,6 @@ RetryObjectLoading:
 	}
 #endif
 	reset_time();
-
 	return 1;
 }
 

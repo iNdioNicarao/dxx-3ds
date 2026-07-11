@@ -31,6 +31,8 @@ extern int Automap_active;
 extern void show_controls_3ds(void);
 extern void cycle_cockpit_next(void);
 extern void cycle_cockpit_prev(void);
+extern void dbg_dump_ql(void);	// kconfig.c: full input-state dump after quick-load
+extern int dump_input_after_ql;
 
 // Emit a synthetic key as a clean pulse (down then up) so no key state lingers.
 // key_handler() keeps sticky keyd_pressed[] state, and modal dialogs (e.g. the
@@ -179,38 +181,51 @@ void event_poll()
 				} else if (btn_map[i].mask == (1<<5)) {
 					send_key_pulse(SDLK_y); idle = 0;
 				}
-				// Cockpit view-cycle: hold START + tap R (next) / L (prev).
-				// SELECT alone stays Automap; SELECT+dpad is unused to avoid
-				// the automap-vs-cycle conflict.
-				if (btn_map[i].mask == (1<<3)) {
+				// Cockpit cycle: bare D-UP/D-DOWN (no START). The user does
+				// not use d-pad up/down for movement (C-Stick slides), so
+				// repurpose them to cycle the cockpit, matching desktop
+				// Descent's arrow up/down "cycle cockpit" behaviour.
+				else if (btn_map[i].mask == (1<<6)) {	// D-UP = prev cockpit
+					cycle_cockpit_prev(); idle = 0; continue;
+				}
+				else if (btn_map[i].mask == (1<<7)) {	// D-DOWN = next cockpit
+					cycle_cockpit_next(); idle = 0; continue;
+				}
+				// START held: R/L also cycle cockpit (alternate binding),
+				// X=quick save, Y=quick load, SELECT=controls, ZL=benchmark.
+				else if (btn_map[i].mask == (1<<3)) {
 					if (current_keys & (1<<8))		// START + R = next view
 						cycle_cockpit_next();
-					else if (btn_map[i].mask == (1<<9))	// START + L = prev view
+					else if (current_keys & (1<<9))	// START + L = prev view
 						cycle_cockpit_prev();
-					else if (btn_map[i].mask == (1<<14))	// START + ZL = toggle benchmark
+					else if (current_keys & (1<<14))	// START + ZL = toggle benchmark
 						benchmark_toggle();
-					// Cockpit cycle via START + D-UP/D-DOWN (3DS d-pad).
-					// D-UP/D-DOWN are otherwise Slide up/down; under START
-					// they repurpose to cockpit prev/next, matching the
-					// desktop Descent "cycle cockpit" on arrow up/down.
-					else if (btn_map[i].mask == (1<<6))	// START + D-UP = prev cockpit
-						cycle_cockpit_prev();
-					else if (btn_map[i].mask == (1<<7))	// START + D-DOWN = next cockpit
-						cycle_cockpit_next();
-						}
-						}
-						}
+					else if (current_keys & (1<<10))	// START + X = quick save
+						pending_quick_save = 1;
+					else if (current_keys & (1<<11))	// START + Y = quick load
+						pending_quick_load = 1;
+					else if (current_keys & (1<<2))	// START + SELECT = controls
+						show_controls_3ds();
+					else
+						send_key_pulse(SDLK_ESCAPE);
+					idle = 0;
+				}
+				}
 
-	for (int i = 0; btn_map[i].mask != 0; i++) {
-		if (kDown & btn_map[i].mask) {
-			// On the automap, L/R act as F9/F10 (zoom) instead of their
-			// gameplay actions (drop bomb / fire primary), which are unused
-			// in the modal map window.
-			if (Automap_active && (btn_map[i].mask == (1<<9))) {  // L
-				send_key_pulse(SDLK_F9); idle = 0; continue;
-			}
-			if (Automap_active && (btn_map[i].mask == (1<<8))) {  // R
-				send_key_pulse(SDLK_F10); idle = 0; continue;
+				for (int i = 0; btn_map[i].mask != 0; i++) {
+				if (kDown & btn_map[i].mask) {
+					// On the automap, L=zoom in (F9), B=zoom out (F10),
+					// R is unused there, A=back out. In other modal maps
+					// the same repurposing applies.
+					if (Automap_active && (btn_map[i].mask == (1<<9))) {	// L
+						send_key_pulse(SDLK_F9); idle = 0; continue;
+					}
+					if (Automap_active && (btn_map[i].mask == (1<<1))) {	// B = zoom OUT
+						send_key_pulse(SDLK_F10); idle = 0; continue;
+					}
+					if (Automap_active && (btn_map[i].mask == (1<<8))) {	// R (unused in map)
+						idle = 0; continue;
+					}
 			}
 			if (btn_map[i].joy_btn != -1) {
 				SDL_JoyButtonEvent jbe;
@@ -264,6 +279,18 @@ void event_poll()
 			old_axes[i] = val;
 			idle = 0;
 		}
+	}
+#endif
+
+#ifdef __3DS__
+	// One-shot input-state dump ~2s after a quick-load (dump_input_after_ql
+	// counts down ~120 frames). Calls dbg_dump_ql() in kconfig.c, which
+	// captures the full input subsystem so we see what the quick-load
+	// actually left dead (vs a fresh game), instead of guessing slide_on.
+	if (dump_input_after_ql > 0) {
+		dump_input_after_ql--;
+		if (dump_input_after_ql == 0)
+			dbg_dump_ql();
 	}
 #endif
 

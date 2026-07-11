@@ -1217,8 +1217,24 @@ int is_key_rotate_event(d_event *event) {
 		default: return 0; 
 	}
 
-	return 0; 
+	return 0;
 }
+
+#ifdef __3DS__
+// Full input-subsystem dump ~2s after a quick-load (called from
+// event.c's dump_input_after_ql countdown). Shows what the
+// quick-load actually left the input in vs a fresh game.
+void dbg_dump_ql(void)
+{
+	FILE *df = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
+	if (!df) return;
+	fprintf(df, "QLDUMP slide_on=%d ctl_type=%d objnum=%d\n",
+		Controls.slide_on_state,
+		ConsoleObject ? ConsoleObject->control_type : -1,
+		Players[0].objnum);
+	fclose(df);
+}
+#endif
 
 void kconfig_read_controls(d_event *event, int automap_flag)
 {
