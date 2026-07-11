@@ -1222,17 +1222,21 @@ int is_key_rotate_event(d_event *event) {
 
 #ifdef __3DS__
 // Full input-subsystem dump at QL success and ~2s later (console + file).
-// Captures joystick AXIS values, button states, JoystickSens (the
-// multiplier that turns axis movement into ship motion), and the
-// computed heading/pitch/sideways times -- so we can see exactly
-// where the chain breaks after quick-load.
+// Controls are proven fully computed post-QL (h/p/sw non-zero), and
+// read_flying_controls applies them to ConsoleObject. If the ship still
+// doesn't move, ConsoleObject is likely STALE after QL (points to a
+// detached object while the real player object lives elsewhere) -> the
+// camera follows the frozen object. Compare ConsoleObject to the player's
+// actual object slot to confirm.
 void dbg_dump_ql(void)
 {
 	extern window *Game_wind;
 	int front_is_game = (window_get_front() == Game_wind) && (Game_wind != NULL);
-	char msg[256];
+	object *pobj = &Objects[Players[Player_num].objnum];
+	int cobj_match = (ConsoleObject == pobj);
+	char msg[320];
 	snprintf(msg, sizeof(msg),
-		"QLDUMP front=%d slide_on=%d ctl=%d obj=%d | axes=%d,%d,%d,%d | fire=%d slL=%d slR=%d | sens=%d,%d,%d,%d | h=%d p=%d sw=%d",
+		"QLDUMP front=%d slide_on=%d ctl=%d obj=%d | axes=%d,%d,%d,%d | fire=%d slL=%d slR=%d | sens=%d,%d,%d,%d | h=%d p=%d sw=%d | cobj=%p pobj=%p match=%d cseg=%d pseg=%d",
 		front_is_game,
 		Controls.slide_on_state,
 		ConsoleObject ? ConsoleObject->control_type : -1,
@@ -1243,7 +1247,10 @@ void dbg_dump_ql(void)
 		Controls.btn_slide_left_state, Controls.btn_slide_right_state,
 		PlayerCfg.JoystickSens[0], PlayerCfg.JoystickSens[1],
 		PlayerCfg.JoystickSens[2], PlayerCfg.JoystickSens[3],
-		Controls.heading_time, Controls.pitch_time, Controls.sideways_thrust_time);
+		Controls.heading_time, Controls.pitch_time, Controls.sideways_thrust_time,
+		(void *)ConsoleObject, (void *)pobj, cobj_match,
+		ConsoleObject ? ConsoleObject->segnum : -1,
+		pobj ? pobj->segnum : -1);
 	con_printf(CON_URGENT, "%s\n", msg);
 	FILE *df = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
 	if (!df) return;
