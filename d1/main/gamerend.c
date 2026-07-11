@@ -524,11 +524,12 @@ void game_draw_hud_stuff()
 
 	render_countdown_gauge();
 
-	// Show FPS on the death screen unconditionally: the user wants it there,
-	// and there is no controller toggle for GameCfg.FPSIndicator (defaults 0,
-	// no keyboard to enable it on 3DS). In-game FPS still respects the config
-	// flag; on the death screen we force it regardless of cockpit mode.
-	if (GameCfg.FPSIndicator || Player_is_dead)
+	// Call show_framerate() when FPS is shown, on the death screen, OR when
+	// the benchmark is active -- the benchmark's per-second logger lives
+	// inside show_framerate and must tick even if FPSIndicator is off,
+	// otherwise BENCH lines never hit the trace (the benchmark toggle's
+	// console message would misleadingly suggest it's logging).
+	if (GameCfg.FPSIndicator || Player_is_dead || benchmark_active)
 		show_framerate();
 
 	if ( (Game_mode & GM_MULTI) && (PlayerCfg.ObsShowObs)) {
