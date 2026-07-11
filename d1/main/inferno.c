@@ -495,8 +495,17 @@ int main(int argc, char *argv[])
 	// Power-off trace: confirms the main loop actually exited (aptMainLoop
 	// returned false) vs. hanging inside the loop. Logs ONCE on real exit.
 	{ FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a"); if (pf) { fprintf(pf, "MAIN LOOP EXITED (aptMainLoop false)\n"); fclose(pf); } }
-#endif
-
+	// On power-off the 3DS tears down the display asynchronously, so ANY
+	// teardown call (show_menus render, close_game, SDL_Quit->gfxExit, even
+	// the config SD-write) can block forever waiting on a display that's
+	// already gone. The hang point varied run-to-run (sometimes in
+	// show_menus, sometimes after WriteConfigFile), which is the signature
+	// of that race. The only reliable fix is to hard-exit the process here
+	// so the OS reclaims the GPU/FS and none of the teardown runs. Config
+	// is already persisted during play (WriteConfigFile is also called from
+	// the menus), so nothing important is lost.
+	svcExitProcess();
+#else
 	// Tidy up - avoids a crash on exit
 	{
 		window *wind;
@@ -506,12 +515,9 @@ int main(int argc, char *argv[])
 			window_close(wind);
 	}
 
-#ifdef __3DS__
-	{ FILE *pf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a"); if (pf) { fprintf(pf, "post-loop teardown done, entering arch_close\n"); fclose(pf); } }
-#endif
-
 	WriteConfigFile();
 	show_order_form();
+#endif
 
 	con_printf( CON_DEBUG, "\nCleanup...\n" );
 	close_game();
