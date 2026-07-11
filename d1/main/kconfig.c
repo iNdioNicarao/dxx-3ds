@@ -1221,17 +1221,18 @@ int is_key_rotate_event(d_event *event) {
 }
 
 #ifdef __3DS__
-// Full input-subsystem dump ~2s after a quick-load (and immediately at
-// QL success). Prints to the bottom-screen console (survives a hard
-// power-off) AND the file. Captures joystick AXIS values + button
-// states so we can see if the joystick event source is alive post-QL.
+// Full input-subsystem dump at QL success and ~2s later (console + file).
+// Captures joystick AXIS values, button states, JoystickSens (the
+// multiplier that turns axis movement into ship motion), and the
+// computed heading/pitch/sideways times -- so we can see exactly
+// where the chain breaks after quick-load.
 void dbg_dump_ql(void)
 {
 	extern window *Game_wind;
 	int front_is_game = (window_get_front() == Game_wind) && (Game_wind != NULL);
-	char msg[200];
+	char msg[256];
 	snprintf(msg, sizeof(msg),
-		"QLDUMP front=%d slide_on=%d ctl=%d obj=%d | axes=%d,%d,%d,%d | fire=%d slideL=%d slideR=%d",
+		"QLDUMP front=%d slide_on=%d ctl=%d obj=%d | axes=%d,%d,%d,%d | fire=%d slL=%d slR=%d | sens=%d,%d,%d,%d | h=%d p=%d sw=%d",
 		front_is_game,
 		Controls.slide_on_state,
 		ConsoleObject ? ConsoleObject->control_type : -1,
@@ -1239,7 +1240,10 @@ void dbg_dump_ql(void)
 		Controls.joy_axis[0], Controls.joy_axis[1],
 		Controls.joy_axis[2], Controls.joy_axis[3],
 		Controls.fire_primary_state,
-		Controls.btn_slide_left_state, Controls.btn_slide_right_state);
+		Controls.btn_slide_left_state, Controls.btn_slide_right_state,
+		PlayerCfg.JoystickSens[0], PlayerCfg.JoystickSens[1],
+		PlayerCfg.JoystickSens[2], PlayerCfg.JoystickSens[3],
+		Controls.heading_time, Controls.pitch_time, Controls.sideways_thrust_time);
 	con_printf(CON_URGENT, "%s\n", msg);
 	FILE *df = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
 	if (!df) return;
