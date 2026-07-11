@@ -25,7 +25,6 @@ extern void mouse_button_handler(SDL_MouseButtonEvent *mbe);
 extern void mouse_motion_handler(SDL_MouseMotionEvent *mme);
 extern void mouse_cursor_autohide();
 extern void benchmark_toggle(void);
-extern game_cheats cheats;
 extern int state_quick_save(void);
 extern int state_quick_load(void);
 extern int Automap_active;
@@ -159,6 +158,7 @@ void event_poll()
 		{ 0, -1, SDLK_UNKNOWN }
 	};
 
+	// D-RIGHT/D-LEFT weapon cycling via Descent's standard cycle keys (X/Y).
 	// START -> Esc: opens the in-game "Abort Game?" dialog and backs out of
 	// menus. Emitted as a pulse so it works every press (and through modals).
 	// START+X = name-free quick save, START+Y = name-free quick load (no kbd).
@@ -171,43 +171,46 @@ void event_poll()
 					pending_quick_load = 1;
 				else if (current_keys & (1<<9))
 					show_controls_3ds();
-				else if (current_keys & (1<<8))	// START + R = toggle rapidfire cheat
-					cheats.rapidfire = !cheats.rapidfire;
-				else if (current_keys & (1<<14))	// START + ZR = toggle cloak cheat
-					cheats.cloak = !cheats.cloak;
-				else if (current_keys & (1<<15))	// START + ZL = toggle benchmark
-					benchmark_toggle();
 				else
 					send_key_pulse(SDLK_ESCAPE);
 				idle = 0;
-			} else if (btn_map[i].mask == (1<<4)) {
-				send_key_pulse(SDLK_x); idle = 0;
-			} else if (btn_map[i].mask == (1<<5)) {
-				send_key_pulse(SDLK_y); idle = 0;
-			}
-		}
-	}
+				} else if (btn_map[i].mask == (1<<4)) {
+					send_key_pulse(SDLK_x); idle = 0;
+				} else if (btn_map[i].mask == (1<<5)) {
+					send_key_pulse(SDLK_y); idle = 0;
+				}
+				// Cockpit view-cycle: hold START + tap R (next) / L (prev).
+				// SELECT alone stays Automap; SELECT+dpad is unused to avoid
+				// the automap-vs-cycle conflict.
+				if (btn_map[i].mask == (1<<3)) {
+					if (current_keys & (1<<8))		// START + R = next view
+						cycle_cockpit_next();
+					else if (btn_map[i].mask == (1<<9))	// START + L = prev view
+						cycle_cockpit_prev();
+					else if (btn_map[i].mask == (1<<14))	// START + ZL = toggle benchmark
+						benchmark_toggle();
+					// Cockpit cycle via START + D-UP/D-DOWN (3DS d-pad).
+					// D-UP/D-DOWN are otherwise Slide up/down; under START
+					// they repurpose to cockpit prev/next, matching the
+					// desktop Descent "cycle cockpit" on arrow up/down.
+					else if (btn_map[i].mask == (1<<6))	// START + D-UP = prev cockpit
+						cycle_cockpit_prev();
+					else if (btn_map[i].mask == (1<<7))	// START + D-DOWN = next cockpit
+						cycle_cockpit_next();
+						}
+						}
+						}
 
 	for (int i = 0; btn_map[i].mask != 0; i++) {
 		if (kDown & btn_map[i].mask) {
 			// On the automap, L/R act as F9/F10 (zoom) instead of their
 			// gameplay actions (drop bomb / fire primary), which are unused
 			// in the modal map window.
-			if (Automap_active && (btn_map[i].mask == (1<<9))) {	// L
+			if (Automap_active && (btn_map[i].mask == (1<<9))) {  // L
 				send_key_pulse(SDLK_F9); idle = 0; continue;
 			}
-			if (Automap_active && (btn_map[i].mask == (1<<8))) {	// R
+			if (Automap_active && (btn_map[i].mask == (1<<8))) {  // R
 				send_key_pulse(SDLK_F10); idle = 0; continue;
-			}
-			// Cockpit cycle: D-UP/D-DOWN (no START needed). The d-pad
-			// is otherwise Slide up/down; standalone (un-modified) it
-			// cycles the cockpit view, matching desktop Descent's arrow
-			// up/down behaviour. (START+ZL still toggles benchmark.)
-			if (btn_map[i].mask == (1<<6)) {	// D-UP = prev cockpit
-				cycle_cockpit_prev(); idle = 0; continue;
-			}
-			if (btn_map[i].mask == (1<<7)) {	// D-DOWN = next cockpit
-				cycle_cockpit_next(); idle = 0; continue;
 			}
 			if (btn_map[i].joy_btn != -1) {
 				SDL_JoyButtonEvent jbe;
