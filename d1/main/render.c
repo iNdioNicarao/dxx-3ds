@@ -51,13 +51,21 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "timer.h"
 
 #ifdef __3DS__
-// Accumulated world-render time (fix64 ms) for the stereo-3D headroom
-// analysis in gamerend.c's benchmark. render_mine is the part that doubles
-// in stereo, so we time it here and the benchmark averages/prints it.
+// Minimal 3DS specifics: do NOT include <3ds.h> here -- it transitively
+// pulls in hid.h which #defines KEY_A/KEY_B/... and clashes with d1's own
+// key.h (compile error "expected identifier before numeric constant").
+// Forward-declare the single SVC we need and the clock constant instead.
+#include <stdint.h>
+extern uint64_t svcGetSystemTick(void);
+#ifndef SYSCLOCK_ARM11
+#define SYSCLOCK_ARM11 268000000u
+#endif
 extern int bench_world_acc;
 extern int benchmark_active;
 #endif
+
 #include "effects.h"
+
 #include "playsave.h"
 #ifdef OGL
 #include "ogl_init.h"
@@ -1442,13 +1450,15 @@ void render_frame(fix eye_offset)
 	}
 
 #ifdef __3DS__
+	// NOTE: timer_query() only updates once per frame, so two calls inside
+	// render_mine return the same value -> dt=0. Use svcGetSystemTick()
+	// (ARM11 tick counter, ~3.7ns resolution) for a real sub-frame measurement.
 	if (benchmark_active) {
-		fix64 _t0 = timer_query();
+		uint64_t _t0 = svcGetSystemTick();
 		render_mine(start_seg_num,eye_offset);
-		fix64 _dt = timer_query() - _t0;
-		// fixmul(_dt,1000) converts fix16 seconds -> fix16 milliseconds;
-		// keep it as fix16 and let show_framerate apply f2i on the average.
-		bench_world_acc += fixmul(_dt, 1000);
+		uint64_t _dt = svcGetSystemTick() - _t0;
+		// ticks -> fix16 milliseconds: (dt * 1000 / SYSCLOCK_ARM11) << 16
+		bench_world_acc += (int)((_dt * 1000ull / SYSCLOCK_ARM11) << 16);
 	} else
 #endif
 	render_mine(start_seg_num,eye_offset);
