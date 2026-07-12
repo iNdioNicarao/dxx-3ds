@@ -1446,7 +1446,9 @@ void render_frame(fix eye_offset)
 		fix64 _t0 = timer_query();
 		render_mine(start_seg_num,eye_offset);
 		fix64 _dt = timer_query() - _t0;
-		bench_world_acc += f2i(fixmul(_dt, 1000));	// fix64 sec -> ms
+		// fixmul(_dt,1000) converts fix16 seconds -> fix16 milliseconds;
+		// keep it as fix16 and let show_framerate apply f2i on the average.
+		bench_world_acc += fixmul(_dt, 1000);
 	} else
 #endif
 	render_mine(start_seg_num,eye_offset);

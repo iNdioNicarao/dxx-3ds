@@ -116,7 +116,7 @@ void show_framerate()
 		bench_sum += fps_rate;
 		if (fps_rate < bench_min) bench_min = fps_rate;
 		if (fps_rate > bench_max) bench_max = fps_rate;
-		int world_avg = bench_world_acc / (fps_rate > 0 ? fps_rate : 1);
+		int world_avg = f2i(bench_world_acc / (fps_rate > 0 ? fps_rate : 1));
 		bench_world_acc = 0;
 		FILE *bf = fopen("sdmc:/3ds/d1/pwrtrace.txt", "a");
 		if (bf) {
