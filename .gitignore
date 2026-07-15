@@ -1,19 +1,37 @@
-# Build artifacts (never commit binaries / crash dumps)
-*.cia
-*.3dsx
-*.dmp
-*.dump
-
-# Local build outputs
-build/
+# --- Build outputs (generated, never commit) ---
 *.elf
+*.3dsx
+*.cia
+*.smdh
+*.bnr
+*.icn
+*.map
 
-# Local scratch / logs
-*.bundle
-final_changes.diff
-parsed_dump_*.txt
-crash_dump_*.dmp
+# --- Game data the USER must supply (copyrighted, NOT redistributable) ---
+# Place your own descent.hog / descent.pig (from a legally-owned Descent 1) here:
+d1/3ds_data/romfs/descent.hog
+d1/3ds_data/romfs/descent.pig
+# Also the DXX-Switch music pack (d1xr-sc55-music.zip) and jingle.wav are user-supplied.
 
-# OS / editor
+# --- Tooling binaries (download separately, see README) ---
+/bannertool
+/makerom
+/makerom.zip
+/d1xr-sc55-music.zip
+
+# --- Debug / personal artifacts ---
+*.JPEG
+*.jpeg
+*.png
+*.mov
+*.mp4
+IMG_*.JPEG
+diag/
+d1/3ds_data/.
+luma3ds_exception_dump_parser/
+
+# --- OS / editor cruft ---
 .DS_Store
 Thumbs.db
+*.swp
+*~
