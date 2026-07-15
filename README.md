@@ -79,7 +79,7 @@ The 3DS can't play the game's HMP→MIDI music directly.
 | Rear view (hold)         | `ZL`                                          |
 | Automap                  | `SELECT`                                      |
 | Menu / pause / back      | `START` (Esc)                                |
-| Cycle cockpit view        | `START` + `D-UP` (next) / `D-DOWN` (prev)   |
+| Cycle cockpit view        | D-Pad Up (prev) / D-Pad Down (next)         |
 | Weapon prev / next        | `D-LEFT` / `D-RIGHT`                        |
 | Quick save               | `START` + `X`                                |
 | Quick load               | `START` + `Y`                                |
@@ -116,7 +116,7 @@ These were broken or missing in the original 3DS port and are now working:
   called *inside* the event-poll loop, corrupting the window/event stack so
   all joystick input died after a load. Now deferred to run after the poll
   loop returns.
-- **Cockpit view cycling** via `START` + `D-UP`/`D-DOWN` (no keyboard).
+- **Cockpit view cycling** via bare `D-Pad Up`/`D-Pad Down` (no keyboard).
 - **Bilinear texture filtering** forced on (PICA200 defaulted to nearest).
 - **Level select** uses a d-pad number slider instead of keyboard text entry.
 - **Automap boundaries** — picaGL has no `GL_LINES`; edges now draw as

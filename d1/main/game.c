@@ -802,6 +802,7 @@ void show_controls_3ds()
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "L .............. Drop bomb";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "ZL ............. Rear view";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "ZR ............. Fire flare";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "D-Pad Up/Down .. Cycle cockpit view";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "MENUS";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "A .............. Select      B ....... Back";

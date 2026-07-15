@@ -31,7 +31,7 @@ performance reality-check:
   ZL/ZR-dependent combos (benchmark, stereo method, convergence) onto
   buttons that exist on original hardware (e.g. START+SELECT, or L/R
   double-tap). The `btn_map[]` table and the START-combo block are the
-  two places to touch. Be aware the cockpit-cycle (START+D-UP/DN) and
+  two places to touch. Be aware the cockpit-cycle (bare D-Pad Up/Down) and
   weapon-cycle (D-L/R) already use only original-3DS buttons, so those
   are fine.
 - **Clock (`d1/arch/sdl/init.c`):** `osSetSpeedupEnable(true)` is a
