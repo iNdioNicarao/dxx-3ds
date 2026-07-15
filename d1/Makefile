@@ -28,7 +28,7 @@ include $(DEVKITARM)/3ds_rules
 #     - <libctru folder>/default_icon.png
 #---------------------------------------------------------------------------------
 APP_TITLE		:= D1X 3DS
-APP_DESCRIPTION := Port of DXX-Switch to 3DS (Switch port by aagallag)
+APP_DESCRIPTION := Port of DXX-Rebirth to 3DS
 APP_AUTHOR		:= El iNdioNicarao
 VER_MAJOR	:=	1
 VER_MINOR	:=	9
