@@ -42,10 +42,24 @@ You must **supply your own Descent I game data** — it is copyrighted and is
    legitimate purchase of the game — tested with
    [Descent I on Steam](https://store.steampowered.com/app/273570/Descent/).
    (Other releases — GOG, CD-ROM — should work but are untested here.)
-3. Install `d1x-3ds.cia` with FBI and launch from the home menu.
 
-> **No `.cia` in the repo.** Build it yourself (see *Building*), or obtain a
-> build from a release. The repo ships source + a Docker build flow, not binaries.
+Then pick **one** install method:
+
+**A. CIA (install to home menu)** — use the `d1x-3ds.cia` from a release:
+- Copy `d1x-3ds.cia` to your SD card, install it with **FBI**, and launch
+  from the home menu.
+
+**B. 3DSX (Homebrew Launcher, no install)** — use the `d1x-3ds.3dsx` +
+`d1x-3ds.smdh` pair from a release:
+- Copy **both** files into `sd:/3ds/D1X-3DS/` (keep them together — the
+  `.smdh` is the icon/metadata the Homebrew Launcher needs).
+- Launch `D1X 3DS` from the **Homebrew Menu** (hold the appropriate
+  exploit at boot, or use a forwarder).
+
+> **Binaries come from Releases, not the repo.** The repo ships source + a
+> Docker build flow. Grab the prebuilt `d1x-3ds.cia` / `d1x-3ds.3dsx` from
+> the [Releases](https://github.com/iNdioNicarao/dxx-3ds/releases) page
+> (or build them yourself — see *Building*).
 
 ---
 
