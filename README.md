@@ -210,6 +210,27 @@ Outputs: `d1/d1x-3ds.3dsx`, `d1/d1x-3ds.elf`,
 
 ---
 
+## Acknowledgments
+
+This port — including the stereoscopic-3D work, the public-release history
+scrub (removing copyrighted game data, debug artifacts, and the Descent II
+tree), the documentation, and the build/release tooling — was developed with
+the assistance of **Hermes Agent**, an AI coding assistant.
+
+- **Assistant:** Hermes Agent ([Nous Research](https://nousresearch.com))
+- **Model used:** `tencent/hy3:free` (via OpenRouter)
+- **How it was used:** end-to-end — tracing the 3DS render/display path,
+  root-causing and fixing the stereoscopic-3D bugs, preparing the repository
+  for public release (copyright/large-file scrub with `git filter-repo`,
+  branch organization, README + `docs/`), and building/packaging the CIA.
+
+> **Note on token usage:** the exact token count for this project is not
+> exposed to the assistant and is not recorded here. If you want a figure,
+> check the OpenRouter / Hermes usage dashboard for the `tencent/hy3:free`
+> model over the development period.
+
+---
+
 ## License
 
 See [COPYING.txt](COPYING.txt). DXX-Rebirth and this port are distributed
