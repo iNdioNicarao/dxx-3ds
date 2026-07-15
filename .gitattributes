@@ -1,0 +1,6 @@
+# Force LF line endings for shell scripts so they run correctly under
+# GNU bash (e.g. inside the Docker build container). Windows core.autocrlf
+# would otherwise rewrite them to CRLF, which breaks `make_cia.sh`
+# (bash chokes on the trailing \r, so bannertool/-rsf args are dropped).
+*.sh text eol=lf
+*.rsf text eol=lf
