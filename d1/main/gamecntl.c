@@ -69,7 +69,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "newmenu.h"
 #include "game.h"
 #include "menu.h"
-#include "bottom_screen.h" /* 3DS bottom-screen RESUME button while paused */
+#include "bottom_screen.h" /* 3DS bottom-screen in-game UI (MENU/SAVE/REC + top-row buttons) */
 #include "gamefont.h"
 #include "endlevel.h"
 #include "config.h"
@@ -238,11 +238,6 @@ int pause_handler(window *wind, d_event *event, char *msg)
 	{
 		case EVENT_WINDOW_ACTIVATED:
 			game_flush_inputs();
-#ifdef __3DS__
-			/* Show the bottom-screen RESUME key (the 3DS has no ESC/PAUSE
-			 * key to dismiss the pause overlay). */
-			bottom_resume_reset();
-#endif
 			break;
 
 		case EVENT_KEY_COMMAND:
@@ -271,12 +266,6 @@ int pause_handler(window *wind, d_event *event, char *msg)
 
 		case EVENT_IDLE:
 #ifdef __3DS__
-			/* Bottom-screen RESUME key closes the pause overlay, returning
-			 * to the running game. */
-			if (bottom_resume_tapped()) {
-				window_close(wind);
-				return 1;
-			}
 			bottom_screen_present();
 #endif
 			timer_delay2(50);

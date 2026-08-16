@@ -948,37 +948,6 @@ void bottom_menu_reset(void)
 	g_menu_btn_prev = 0;
 }
 
-/* In-game "RESUME" button (bottom-center). Shown only while the game is
- * PAUSED (do_game_pause overlay is up). Tapping it closes the pause window,
- * resuming the running game — this is the "return button" that otherwise has
- * no 3DS key (the pause overlay resumes on ESC/PAUSE, neither of which exists
- * on the 3DS). Same footprint as the MENU button so it overlays cleanly. */
-static int g_resume_btn_prev = 0;
-static int g_resume_btn_state = -1;
-int bottom_resume_tapped(void)
-{
-	if (g_resume_btn_state != 1) {
-		g_resume_btn_state = 1;
-		/* Shares the MENU slot's bbox: RESUME is drawn in exactly the same
-		 * rect and replaces MENU, so the erase must cover whatever MENU
-		 * last drew there. */
-		draw_key(MEN_BX, MEN_BY, MEN_BW, MEN_BH, BTN_BLUE, "RESUME", g_menu_btn_bbox);
-	}
-
-	touchPosition t;
-	hidTouchRead(&t);
-	int held = (hidKeysHeld() & KEY_TOUCH) && bottom_hit(MEN_BX, MEN_BY, MEN_BW, MEN_BH, &t);
-	int tapped = held && !g_resume_btn_prev;
-	g_resume_btn_prev = held;
-
-	return tapped ? 1 : 0;
-}
-
-void bottom_resume_reset(void)
-{
-	g_resume_btn_state = -1;
-	g_resume_btn_prev = 0;
-}
 #else
 /* Non-3DS builds: no bottom-screen buttons; Ctrl+D / ESC are real keys there. */
 static inline int bottom_pilot_delete_tapped(int enable) { (void)enable; return 0; }

@@ -98,12 +98,6 @@ void bottom_rec_reset(void);
 int bottom_scores_rst_tapped(int enable);
 void bottom_scores_rst_reset(void);
 
-/* In-game "RESUME" on-screen button (3DS only). Shown while the game is
- * PAUSED; returns 1 on a fresh tap so the caller can close the pause window
- * and resume. reset() clears dirty-state. */
-int bottom_resume_tapped(void);
-void bottom_resume_reset(void);
-
 /* Draw a string using the real Descent game font (GAME_FONT) into the bottom
  * buffer (3DS only). Falls back to nothing if the font isn't loaded yet.
  * Mirrors the 8x8 blitter's X-orientation so glyphs stay upright after the

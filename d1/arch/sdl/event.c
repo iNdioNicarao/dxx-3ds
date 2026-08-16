@@ -35,6 +35,7 @@ extern void stereo_sep_cycle(int step);
 extern void stereo_method_toggle(void);
 extern void stereo_conv_cycle(int step);
 extern int in_game;
+extern int do_game_pause(void);
 
 // Emit a synthetic key as a clean pulse (down then up) so no key state lingers.
 // key_handler() keeps sticky keyd_pressed[] state, and modal dialogs (e.g. the
@@ -226,8 +227,17 @@ void event_poll()
 					stereo_conv_cycle(-1);
 				else if (current_keys & (1<<9))	// START + R = more convergence
 					stereo_conv_cycle(+1);
-				else
-					send_key_pulse(SDLK_ESCAPE);
+				else {
+					/* Bare START: pause ONLY when actually in the
+					 * live game (Game_wind is the front window).
+					 * Otherwise (briefing, menus, title) behave as
+					 * before: emit ESC so it still skips briefing
+					 * screens and backs out of menus. */
+					if (in_game)
+						do_game_pause();
+					else
+						send_key_pulse(SDLK_ESCAPE);
+				}
 				idle = 0;
 			} else if (btn_map[i].mask == (1<<4)) {
 				send_key_pulse(SDLK_x); idle = 0;

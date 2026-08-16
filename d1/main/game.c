@@ -83,9 +83,9 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "songs.h"
 
 /* Forward decl: opens the in-game pause overlay (does NOT end the game).
- * Defined in gamecntl.c. Used by the 3DS MENU button so the player can step
- * away and RESUME, instead of hard-exiting to the main menu (which had no
- * return path). */
+ * Defined in gamecntl.c. Used by the 3DS START button (in-game only) so the
+ * player can step away and resume, instead of hard-exiting to the main menu
+ * (which had no return path). Resume is via START again. */
 int do_game_pause(void);
 #include "rbaudio.h"
 #include "multi.h"
@@ -823,7 +823,7 @@ void show_controls_3ds()
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "L .............. Zoom in     R ....... Zoom out";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "SYSTEM";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "START .......... Menu / Abort";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "START .......... Pause";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "START + X ...... Quick Save";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "START + Y ...... Quick Load";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "START + L ...... This controls screen";
@@ -1206,11 +1206,10 @@ int game_handler(window *wind, d_event *event, void *data)
 				show_menus();
 #ifdef __3DS__
 			/* Clear the persistent in-game bottom buttons so none of them
-			 * (MENU/SAVE/REC/RESUME) linger on the main menu. */
+			 * (MENU/SAVE/REC) linger on the main menu. */
 			bottom_menu_reset();
 			bottom_save_reset();
 			bottom_rec_reset();
-			bottom_resume_reset();
 			bottom_clear(0);
 			bottom_screen_present();
 #endif
