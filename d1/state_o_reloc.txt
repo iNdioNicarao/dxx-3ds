@@ -1,0 +1,692 @@
+
+../libs/picaGL/build/state.o:     file format elf32-littlearm
+
+
+Disassembly of section .text._stateInitialize:
+
+00000000 <_stateInitialize>:
+   0:	e3a03008 	mov	r3, #8
+   4:	e92d41f0 	push	{r4, r5, r6, r7, r8, lr}
+   8:	e59f4168 	ldr	r4, [pc, #360]	@ 178 <_stateInitialize+0x178>
+   c:	e3a00c01 	mov	r0, #256	@ 0x100
+  10:	e5945000 	ldr	r5, [r4]
+  14:	e1c530b4 	strh	r3, [r5, #4]
+  18:	ebfffffe 	bl	0 <malloc>
+			18: R_ARM_CALL	malloc
+  1c:	e1a03000 	mov	r3, r0
+  20:	e3a00701 	mov	r0, #262144	@ 0x40000
+  24:	e5853000 	str	r3, [r5]
+  28:	ebfffffe 	bl	0 <linearAlloc>
+			28: R_ARM_CALL	linearAlloc
+  2c:	e1a03000 	mov	r3, r0
+  30:	e3a00701 	mov	r0, #262144	@ 0x40000
+  34:	e5853b44 	str	r3, [r5, #2884]	@ 0xb44
+  38:	e5947000 	ldr	r7, [r4]
+  3c:	ebfffffe 	bl	0 <linearAlloc>
+			3c: R_ARM_CALL	linearAlloc
+  40:	e3a05000 	mov	r5, #0
+  44:	e1a03000 	mov	r3, r0
+  48:	e5946000 	ldr	r6, [r4]
+  4c:	e5873b48 	str	r3, [r7, #2888]	@ 0xb48
+  50:	e59f0124 	ldr	r0, [pc, #292]	@ 17c <_stateInitialize+0x17c>
+  54:	e5865b50 	str	r5, [r6, #2896]	@ 0xb50
+  58:	ebfffffe 	bl	0 <vramAlloc>
+			58: R_ARM_CALL	vramAlloc
+  5c:	e1a03000 	mov	r3, r0
+  60:	e59f0114 	ldr	r0, [pc, #276]	@ 17c <_stateInitialize+0x17c>
+  64:	e5863020 	str	r3, [r6, #32]
+  68:	e5947000 	ldr	r7, [r4]
+  6c:	ebfffffe 	bl	0 <vramAlloc>
+			6c: R_ARM_CALL	vramAlloc
+  70:	e5870024 	str	r0, [r7, #36]	@ 0x24
+  74:	e3a00602 	mov	r0, #2097152	@ 0x200000
+  78:	e5947000 	ldr	r7, [r4]
+  7c:	ebfffffe 	bl	0 <linearAlloc>
+			7c: R_ARM_CALL	linearAlloc
+  80:	e1a03000 	mov	r3, r0
+  84:	e3a00602 	mov	r0, #2097152	@ 0x200000
+  88:	e5873014 	str	r3, [r7, #20]
+  8c:	e5946000 	ldr	r6, [r4]
+  90:	ebfffffe 	bl	0 <linearAlloc>
+			90: R_ARM_CALL	linearAlloc
+  94:	e3a02702 	mov	r2, #524288	@ 0x80000
+  98:	e5860018 	str	r0, [r6, #24]
+  9c:	e5940000 	ldr	r0, [r4]
+  a0:	e59f10d8 	ldr	r1, [pc, #216]	@ 180 <_stateInitialize+0x180>
+  a4:	e5903014 	ldr	r3, [r0, #20]
+  a8:	e5813000 	str	r3, [r1]
+  ac:	e1530005 	cmp	r3, r5
+  b0:	e59f10cc 	ldr	r1, [pc, #204]	@ 184 <_stateInitialize+0x184>
+  b4:	e59f30cc 	ldr	r3, [pc, #204]	@ 188 <_stateInitialize+0x188>
+  b8:	e5815000 	str	r5, [r1]
+  bc:	e5832000 	str	r2, [r3]
+  c0:	0a000028 	beq	168 <_stateInitialize+0x168>
+  c4:	ebfffffe 	bl	0 <GX_BindQueue>
+			c4: R_ARM_CALL	GX_BindQueue
+  c8:	e5940000 	ldr	r0, [r4]
+  cc:	ebfffffe 	bl	0 <gxCmdQueueRun>
+			cc: R_ARM_CALL	gxCmdQueueRun
+  d0:	e59f30b4 	ldr	r3, [pc, #180]	@ 18c <_stateInitialize+0x18c>
+  d4:	e59f00b4 	ldr	r0, [pc, #180]	@ 190 <_stateInitialize+0x190>
+  d8:	e5931000 	ldr	r1, [r3]
+  dc:	e5945000 	ldr	r5, [r4]
+  e0:	ebfffffe 	bl	0 <DVLB_ParseFile>
+			e0: R_ARM_CALL	DVLB_ParseFile
+  e4:	e5943000 	ldr	r3, [r4]
+  e8:	e5850028 	str	r0, [r5, #40]	@ 0x28
+  ec:	e283002c 	add	r0, r3, #44	@ 0x2c
+  f0:	ebfffffe 	bl	0 <shaderProgramInit>
+			f0: R_ARM_CALL	shaderProgramInit
+  f4:	e5940000 	ldr	r0, [r4]
+  f8:	e5903028 	ldr	r3, [r0, #40]	@ 0x28
+  fc:	e280002c 	add	r0, r0, #44	@ 0x2c
+ 100:	e5931014 	ldr	r1, [r3, #20]
+ 104:	ebfffffe 	bl	0 <shaderProgramSetVsh>
+			104: R_ARM_CALL	shaderProgramSetVsh
+ 108:	e5940000 	ldr	r0, [r4]
+ 10c:	e280002c 	add	r0, r0, #44	@ 0x2c
+ 110:	ebfffffe 	bl	0 <shaderProgramUse>
+			110: R_ARM_CALL	shaderProgramUse
+ 114:	e59f3078 	ldr	r3, [pc, #120]	@ 194 <_stateInitialize+0x194>
+ 118:	e59f0078 	ldr	r0, [pc, #120]	@ 198 <_stateInitialize+0x198>
+ 11c:	e5931000 	ldr	r1, [r3]
+ 120:	e5945000 	ldr	r5, [r4]
+ 124:	ebfffffe 	bl	0 <DVLB_ParseFile>
+			124: R_ARM_CALL	DVLB_ParseFile
+ 128:	e5943000 	ldr	r3, [r4]
+ 12c:	e5850040 	str	r0, [r5, #64]	@ 0x40
+ 130:	e2830044 	add	r0, r3, #68	@ 0x44
+ 134:	ebfffffe 	bl	0 <shaderProgramInit>
+			134: R_ARM_CALL	shaderProgramInit
+ 138:	e5940000 	ldr	r0, [r4]
+ 13c:	e5903040 	ldr	r3, [r0, #64]	@ 0x40
+ 140:	e2800044 	add	r0, r0, #68	@ 0x44
+ 144:	e5931014 	ldr	r1, [r3, #20]
+ 148:	ebfffffe 	bl	0 <shaderProgramSetVsh>
+			148: R_ARM_CALL	shaderProgramSetVsh
+ 14c:	e5943000 	ldr	r3, [r4]
+ 150:	e1c302d0 	ldrd	r0, [r3, #32]
+ 154:	ebfffffe 	bl	0 <_picaRenderBuffer>
+			154: R_ARM_CALL	_picaRenderBuffer
+ 158:	e8bd41f0 	pop	{r4, r5, r6, r7, r8, lr}
+ 15c:	e59f3038 	ldr	r3, [pc, #56]	@ 19c <_stateInitialize+0x19c>
+ 160:	e5930000 	ldr	r0, [r3]
+ 164:	eafffffe 	b	0 <_picaAttribBuffersLocation>
+			164: R_ARM_JUMP24	_picaAttribBuffersLocation
+ 168:	e3a00007 	mov	r0, #7
+ 16c:	ebfffffe 	bl	0 <svcBreak>
+			16c: R_ARM_CALL	svcBreak
+ 170:	e5940000 	ldr	r0, [r4]
+ 174:	eaffffd2 	b	c4 <_stateInitialize+0xc4>
+ 178:	00000000 	.word	0x00000000
+			178: R_ARM_ABS32	pglState
+ 17c:	0005dc00 	.word	0x0005dc00
+	...
+			180: R_ARM_ABS32	gpuCmdBuf
+			184: R_ARM_ABS32	gpuCmdBufOffset
+			188: R_ARM_ABS32	gpuCmdBufSize
+			18c: R_ARM_ABS32	vshader_shbin_size
+			190: R_ARM_ABS32	vshader_shbin
+			194: R_ARM_ABS32	clear_shbin_size
+			198: R_ARM_ABS32	clear_shbin
+			19c: R_ARM_ABS32	__ctru_linear_heap
+
+Disassembly of section .text._stateDefault:
+
+00000000 <_stateDefault>:
+   0:	e92d4030 	push	{r4, r5, lr}
+   4:	e3a04e97 	mov	r4, #2416	@ 0x970
+   8:	e59f5194 	ldr	r5, [pc, #404]	@ 1a4 <_stateDefault+0x1a4>
+   c:	e24dd00c 	sub	sp, sp, #12
+  10:	e5950000 	ldr	r0, [r5]
+  14:	e0800004 	add	r0, r0, r4
+  18:	e2844014 	add	r4, r4, #20
+  1c:	ebfffffe 	bl	0 <_picaTextureEnvReset>
+			1c: R_ARM_CALL	_picaTextureEnvReset
+  20:	e3540d27 	cmp	r4, #2496	@ 0x9c0
+  24:	1afffff9 	bne	10 <_stateDefault+0x10>
+  28:	eddf1a5a 	vldr	s3, [pc, #360]	@ 198 <_stateDefault+0x198>
+  2c:	e3a04000 	mov	r4, #0
+  30:	ed9f0a59 	vldr	s0, [pc, #356]	@ 19c <_stateDefault+0x19c>
+  34:	e5951000 	ldr	r1, [r5]
+  38:	e1a00004 	mov	r0, r4
+  3c:	edc11a1d 	vstr	s3, [r1, #116]	@ 0x74
+  40:	ed810a1e 	vstr	s0, [r1, #120]	@ 0x78
+  44:	ed810a1f 	vstr	s0, [r1, #124]	@ 0x7c
+  48:	e5814998 	str	r4, [r1, #2456]	@ 0x998
+  4c:	e3a030f0 	mov	r3, #240	@ 0xf0
+  50:	e1a01004 	mov	r1, r4
+  54:	e3a02e19 	mov	r2, #400	@ 0x190
+  58:	edcd1a01 	vstr	s3, [sp, #4]
+  5c:	ed8d0a00 	vstr	s0, [sp]
+  60:	ebfffffe 	bl	0 <glViewport>
+			60: R_ARM_CALL	glViewport
+  64:	e1a01004 	mov	r1, r4
+  68:	e1a00004 	mov	r0, r4
+  6c:	e3a030f0 	mov	r3, #240	@ 0xf0
+  70:	e3a02e19 	mov	r2, #400	@ 0x190
+  74:	ebfffffe 	bl	0 <glScissor>
+			74: R_ARM_CALL	glScissor
+  78:	e5953000 	ldr	r3, [r5]
+  7c:	e59f0124 	ldr	r0, [pc, #292]	@ 1a8 <_stateDefault+0x1a8>
+  80:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+  84:	e5c34081 	strb	r4, [r3, #129]	@ 0x81
+  88:	e3822020 	orr	r2, r2, #32
+  8c:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+  90:	ebfffffe 	bl	0 <glCullFace>
+			90: R_ARM_CALL	glCullFace
+  94:	ed9d0a00 	vldr	s0, [sp]
+  98:	e59f010c 	ldr	r0, [pc, #268]	@ 1ac <_stateDefault+0x1ac>
+  9c:	ebfffffe 	bl	0 <glAlphaFunc>
+			9c: R_ARM_CALL	glAlphaFunc
+  a0:	e5953000 	ldr	r3, [r5]
+  a4:	e59f0104 	ldr	r0, [pc, #260]	@ 1b0 <_stateDefault+0x1b0>
+  a8:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+  ac:	e5c34090 	strb	r4, [r3, #144]	@ 0x90
+  b0:	e3822014 	orr	r2, r2, #20
+  b4:	e5c34950 	strb	r4, [r3, #2384]	@ 0x950
+  b8:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+  bc:	ebfffffe 	bl	0 <glEnableClientState>
+			bc: R_ARM_CALL	glEnableClientState
+  c0:	ed9f0b32 	vldr	d0, [pc, #200]	@ 190 <_stateDefault+0x190>
+  c4:	ebfffffe 	bl	0 <glClearDepth>
+			c4: R_ARM_CALL	glClearDepth
+  c8:	e3a00c17 	mov	r0, #5888	@ 0x1700
+  cc:	ebfffffe 	bl	0 <glMatrixMode>
+			cc: R_ARM_CALL	glMatrixMode
+  d0:	e3a0201f 	mov	r2, #31
+  d4:	e5953000 	ldr	r3, [r5]
+  d8:	e59f00d4 	ldr	r0, [pc, #212]	@ 1b4 <_stateDefault+0x1b4>
+  dc:	e5832b20 	str	r2, [r3, #2848]	@ 0xb20
+  e0:	ebfffffe 	bl	0 <glActiveTexture>
+			e0: R_ARM_CALL	glActiveTexture
+  e4:	e1a01004 	mov	r1, r4
+  e8:	e59f00c8 	ldr	r0, [pc, #200]	@ 1b8 <_stateDefault+0x1b8>
+  ec:	ebfffffe 	bl	0 <glBindTexture>
+			ec: R_ARM_CALL	glBindTexture
+  f0:	ed9f0a2a 	vldr	s0, [pc, #168]	@ 1a0 <_stateDefault+0x1a0>
+  f4:	e3a01c22 	mov	r1, #8704	@ 0x2200
+  f8:	e3a00c23 	mov	r0, #8960	@ 0x2300
+  fc:	ebfffffe 	bl	0 <glTexEnvf>
+			fc: R_ARM_CALL	glTexEnvf
+ 100:	e59f00b4 	ldr	r0, [pc, #180]	@ 1bc <_stateDefault+0x1bc>
+ 104:	ebfffffe 	bl	0 <glActiveTexture>
+			104: R_ARM_CALL	glActiveTexture
+ 108:	e1a01004 	mov	r1, r4
+ 10c:	e59f00a4 	ldr	r0, [pc, #164]	@ 1b8 <_stateDefault+0x1b8>
+ 110:	ebfffffe 	bl	0 <glBindTexture>
+			110: R_ARM_CALL	glBindTexture
+ 114:	ed9f0a21 	vldr	s0, [pc, #132]	@ 1a0 <_stateDefault+0x1a0>
+ 118:	e3a01c22 	mov	r1, #8704	@ 0x2200
+ 11c:	e3a00c23 	mov	r0, #8960	@ 0x2300
+ 120:	ebfffffe 	bl	0 <glTexEnvf>
+			120: R_ARM_CALL	glTexEnvf
+ 124:	e59f0094 	ldr	r0, [pc, #148]	@ 1c0 <_stateDefault+0x1c0>
+ 128:	ebfffffe 	bl	0 <glBlendEquation>
+			128: R_ARM_CALL	glBlendEquation
+ 12c:	e1a01004 	mov	r1, r4
+ 130:	e3a00001 	mov	r0, #1
+ 134:	ebfffffe 	bl	0 <glBlendFunc>
+			134: R_ARM_CALL	glBlendFunc
+ 138:	eddd1a01 	vldr	s3, [sp, #4]
+ 13c:	eeb01a61 	vmov.f32	s2, s3
+ 140:	eef00a61 	vmov.f32	s1, s3
+ 144:	eeb00a61 	vmov.f32	s0, s3
+ 148:	ebfffffe 	bl	0 <glColor4f>
+			148: R_ARM_CALL	glColor4f
+ 14c:	e1a00004 	mov	r0, r4
+ 150:	ebfffffe 	bl	0 <_picaEarlyDepthTest>
+			150: R_ARM_CALL	_picaEarlyDepthTest
+ 154:	e3a04001 	mov	r4, #1
+ 158:	e5951000 	ldr	r1, [r5]
+ 15c:	e6ef0074 	uxtb	r0, r4
+ 160:	e2811e9a 	add	r1, r1, #2464	@ 0x9a0
+ 164:	e281100c 	add	r1, r1, #12
+ 168:	e2844001 	add	r4, r4, #1
+ 16c:	ebfffffe 	bl	0 <_picaTextureEnvSet>
+			16c: R_ARM_CALL	_picaTextureEnvSet
+ 170:	e3540006 	cmp	r4, #6
+ 174:	1afffff7 	bne	158 <_stateDefault+0x158>
+ 178:	e3e024ff 	mvn	r2, #-16777216	@ 0xff000000
+ 17c:	e5953000 	ldr	r3, [r5]
+ 180:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+ 184:	e28dd00c 	add	sp, sp, #12
+ 188:	e8bd8030 	pop	{r4, r5, pc}
+ 18c:	e320f000 	nop	{0}
+ 190:	00000000 	.word	0x00000000
+ 194:	3ff00000 	.word	0x3ff00000
+ 198:	3f800000 	.word	0x3f800000
+ 19c:	00000000 	.word	0x00000000
+ 1a0:	46040000 	.word	0x46040000
+ 1a4:	00000000 	.word	0x00000000
+			1a4: R_ARM_ABS32	pglState
+ 1a8:	00000405 	.word	0x00000405
+ 1ac:	00000207 	.word	0x00000207
+ 1b0:	00008074 	.word	0x00008074
+ 1b4:	000084c1 	.word	0x000084c1
+ 1b8:	00000de1 	.word	0x00000de1
+ 1bc:	000084c0 	.word	0x000084c0
+ 1c0:	00008006 	.word	0x00008006
+
+Disassembly of section .text._stateFlush:
+
+00000000 <_stateFlush>:
+   0:	e92d4010 	push	{r4, lr}
+   4:	e59f4308 	ldr	r4, [pc, #776]	@ 314 <_stateFlush+0x314>
+   8:	e24dd010 	sub	sp, sp, #16
+   c:	e594c000 	ldr	ip, [r4]
+  10:	e59c3b54 	ldr	r3, [ip, #2900]	@ 0xb54
+  14:	e3530000 	cmp	r3, #0
+  18:	0a00005c 	beq	190 <_stateFlush+0x190>
+  1c:	e3130002 	tst	r3, #2
+  20:	1a000085 	bne	23c <_stateFlush+0x23c>
+  24:	e3130b01 	tst	r3, #1024	@ 0x400
+  28:	0a00000c 	beq	60 <_stateFlush+0x60>
+  2c:	e5dc093c 	ldrb	r0, [ip, #2364]	@ 0x93c
+  30:	e59c2940 	ldr	r2, [ip, #2368]	@ 0x940
+  34:	e59ce948 	ldr	lr, [ip, #2376]	@ 0x948
+  38:	e59c1944 	ldr	r1, [ip, #2372]	@ 0x944
+  3c:	e59c394c 	ldr	r3, [ip, #2380]	@ 0x94c
+  40:	e3500000 	cmp	r0, #0
+  44:	e082c00e 	add	ip, r2, lr
+  48:	e58dc000 	str	ip, [sp]
+  4c:	e0813003 	add	r3, r1, r3
+  50:	13a00003 	movne	r0, #3
+  54:	ebfffffe 	bl	0 <_picaScissorTest>
+			54: R_ARM_CALL	_picaScissorTest
+  58:	e594c000 	ldr	ip, [r4]
+  5c:	e59c3b54 	ldr	r3, [ip, #2900]	@ 0xb54
+  60:	e3130004 	tst	r3, #4
+  64:	1a000061 	bne	1f0 <_stateFlush+0x1f0>
+  68:	e3130010 	tst	r3, #16
+  6c:	1a000054 	bne	1c4 <_stateFlush+0x1c4>
+  70:	e3130c01 	tst	r3, #256	@ 0x100
+  74:	0a00000d 	beq	b0 <_stateFlush+0xb0>
+  78:	e5dc309c 	ldrb	r3, [ip, #156]	@ 0x9c
+  7c:	e3530000 	cmp	r3, #0
+  80:	0a00009b 	beq	2f4 <_stateFlush+0x2f4>
+  84:	e5dc10a8 	ldrb	r1, [ip, #168]	@ 0xa8
+  88:	e5dc30a4 	ldrb	r3, [ip, #164]	@ 0xa4
+  8c:	e5dc20a0 	ldrb	r2, [ip, #160]	@ 0xa0
+  90:	e1a00001 	mov	r0, r1
+  94:	e1cd20f0 	strd	r2, [sp]
+  98:	ebfffffe 	bl	0 <_picaBlendFunction>
+			98: R_ARM_CALL	_picaBlendFunction
+  9c:	e5943000 	ldr	r3, [r4]
+  a0:	e59300ac 	ldr	r0, [r3, #172]	@ 0xac
+  a4:	ebfffffe 	bl	0 <_picaBlendColor>
+			a4: R_ARM_CALL	_picaBlendColor
+  a8:	e594c000 	ldr	ip, [r4]
+  ac:	e59c3b54 	ldr	r3, [ip, #2900]	@ 0xb54
+  b0:	e3130080 	tst	r3, #128	@ 0x80
+  b4:	0a000008 	beq	dc <_stateFlush+0xdc>
+  b8:	e5dc3080 	ldrb	r3, [ip, #128]	@ 0x80
+  bc:	ed9c0a1d 	vldr	s0, [ip, #116]	@ 0x74
+  c0:	e3530000 	cmp	r3, #0
+  c4:	eddc0a1e 	vldr	s1, [ip, #120]	@ 0x78
+  c8:	1d9c1a1f 	vldrne	s2, [ip, #124]	@ 0x7c
+  cc:	0d9f1a8f 	vldreq	s2, [pc, #572]	@ 310 <_stateFlush+0x310>
+  d0:	ebfffffe 	bl	0 <_picaDepthMap>
+			d0: R_ARM_CALL	_picaDepthMap
+  d4:	e594c000 	ldr	ip, [r4]
+  d8:	e59c3b54 	ldr	r3, [ip, #2900]	@ 0xb54
+  dc:	e3130008 	tst	r3, #8
+  e0:	1a00002c 	bne	198 <_stateFlush+0x198>
+  e4:	e3130020 	tst	r3, #32
+  e8:	0a000005 	beq	104 <_stateFlush+0x104>
+  ec:	e5dc0081 	ldrb	r0, [ip, #129]	@ 0x81
+  f0:	e3500000 	cmp	r0, #0
+  f4:	15dc0084 	ldrbne	r0, [ip, #132]	@ 0x84
+  f8:	ebfffffe 	bl	0 <_picaCullMode>
+			f8: R_ARM_CALL	_picaCullMode
+  fc:	e594c000 	ldr	ip, [r4]
+ 100:	e59c3b54 	ldr	r3, [ip, #2900]	@ 0xb54
+ 104:	e3130040 	tst	r3, #64	@ 0x40
+ 108:	0a00001c 	beq	180 <_stateFlush+0x180>
+ 10c:	e5dc39c0 	ldrb	r3, [ip, #2496]	@ 0x9c0
+ 110:	e3a00000 	mov	r0, #0
+ 114:	e3530000 	cmp	r3, #0
+ 118:	0a00005d 	beq	294 <_stateFlush+0x294>
+ 11c:	e59c39cc 	ldr	r3, [ip, #2508]	@ 0x9cc
+ 120:	e5933014 	ldr	r3, [r3, #20]
+ 124:	e3530000 	cmp	r3, #0
+ 128:	0a000059 	beq	294 <_stateFlush+0x294>
+ 12c:	e28c1e97 	add	r1, ip, #2416	@ 0x970
+ 130:	ebfffffe 	bl	0 <_picaTextureEnvSet>
+			130: R_ARM_CALL	_picaTextureEnvSet
+ 134:	e5943000 	ldr	r3, [r4]
+ 138:	e3a00001 	mov	r0, #1
+ 13c:	e59319cc 	ldr	r1, [r3, #2508]	@ 0x9cc
+ 140:	ebfffffe 	bl	0 <_picaTextureObjectSet>
+			140: R_ARM_CALL	_picaTextureObjectSet
+ 144:	e5941000 	ldr	r1, [r4]
+ 148:	e3a03001 	mov	r3, #1
+ 14c:	e5d129c1 	ldrb	r2, [r1, #2497]	@ 0x9c1
+ 150:	e3520000 	cmp	r2, #0
+ 154:	1a000056 	bne	2b4 <_stateFlush+0x2b4>
+ 158:	e2811e9a 	add	r1, r1, #2464	@ 0x9a0
+ 15c:	e3a00001 	mov	r0, #1
+ 160:	e281100c 	add	r1, r1, #12
+ 164:	e58d300c 	str	r3, [sp, #12]
+ 168:	ebfffffe 	bl	0 <_picaTextureEnvSet>
+			168: R_ARM_CALL	_picaTextureEnvSet
+ 16c:	e59d300c 	ldr	r3, [sp, #12]
+ 170:	e6ef0073 	uxtb	r0, r3
+ 174:	ebfffffe 	bl	0 <_picaTexUnitEnable>
+			174: R_ARM_CALL	_picaTexUnitEnable
+ 178:	e594c000 	ldr	ip, [r4]
+ 17c:	e59c3b54 	ldr	r3, [ip, #2900]	@ 0xb54
+ 180:	e3130c02 	tst	r3, #512	@ 0x200
+ 184:	1a000036 	bne	264 <_stateFlush+0x264>
+ 188:	e3a03000 	mov	r3, #0
+ 18c:	e58c3b54 	str	r3, [ip, #2900]	@ 0xb54
+ 190:	e28dd010 	add	sp, sp, #16
+ 194:	e8bd8010 	pop	{r4, pc}
+ 198:	e5dc0088 	ldrb	r0, [ip, #136]	@ 0x88
+ 19c:	e5dc2b20 	ldrb	r2, [ip, #2848]	@ 0xb20
+ 1a0:	e2500000 	subs	r0, r0, #0
+ 1a4:	13a00001 	movne	r0, #1
+ 1a8:	e5dc108c 	ldrb	r1, [ip, #140]	@ 0x8c
+ 1ac:	ebfffffe 	bl	0 <_picaDepthTestWriteMask>
+			1ac: R_ARM_CALL	_picaDepthTestWriteMask
+ 1b0:	e594c000 	ldr	ip, [r4]
+ 1b4:	e59c3b54 	ldr	r3, [ip, #2900]	@ 0xb54
+ 1b8:	e3130020 	tst	r3, #32
+ 1bc:	0affffd0 	beq	104 <_stateFlush+0x104>
+ 1c0:	eaffffc9 	b	ec <_stateFlush+0xec>
+ 1c4:	e5dc0090 	ldrb	r0, [ip, #144]	@ 0x90
+ 1c8:	e5dc2098 	ldrb	r2, [ip, #152]	@ 0x98
+ 1cc:	e2500000 	subs	r0, r0, #0
+ 1d0:	13a00001 	movne	r0, #1
+ 1d4:	e5dc1094 	ldrb	r1, [ip, #148]	@ 0x94
+ 1d8:	ebfffffe 	bl	0 <_picaAlphaTest>
+			1d8: R_ARM_CALL	_picaAlphaTest
+ 1dc:	e594c000 	ldr	ip, [r4]
+ 1e0:	e59c3b54 	ldr	r3, [ip, #2900]	@ 0xb54
+ 1e4:	e3130c01 	tst	r3, #256	@ 0x100
+ 1e8:	0affffb0 	beq	b0 <_stateFlush+0xb0>
+ 1ec:	eaffffa1 	b	78 <_stateFlush+0x78>
+ 1f0:	e5dc0950 	ldrb	r0, [ip, #2384]	@ 0x950
+ 1f4:	e5dc1954 	ldrb	r1, [ip, #2388]	@ 0x954
+ 1f8:	e59c395c 	ldr	r3, [ip, #2396]	@ 0x95c
+ 1fc:	e59c2958 	ldr	r2, [ip, #2392]	@ 0x958
+ 200:	e59cc960 	ldr	ip, [ip, #2400]	@ 0x960
+ 204:	e2500000 	subs	r0, r0, #0
+ 208:	13a00001 	movne	r0, #1
+ 20c:	e58dc000 	str	ip, [sp]
+ 210:	ebfffffe 	bl	0 <_picaStencilTest>
+			210: R_ARM_CALL	_picaStencilTest
+ 214:	e5943000 	ldr	r3, [r4]
+ 218:	e5d3296c 	ldrb	r2, [r3, #2412]	@ 0x96c
+ 21c:	e5d31968 	ldrb	r1, [r3, #2408]	@ 0x968
+ 220:	e5d30964 	ldrb	r0, [r3, #2404]	@ 0x964
+ 224:	ebfffffe 	bl	0 <_picaStencilOp>
+			224: R_ARM_CALL	_picaStencilOp
+ 228:	e594c000 	ldr	ip, [r4]
+ 22c:	e59c3b54 	ldr	r3, [ip, #2900]	@ 0xb54
+ 230:	e3130010 	tst	r3, #16
+ 234:	0affff8d 	beq	70 <_stateFlush+0x70>
+ 238:	eaffffe1 	b	1c4 <_stateFlush+0x1c4>
+ 23c:	e59c3a64 	ldr	r3, [ip, #2660]	@ 0xa64
+ 240:	e59c2a68 	ldr	r2, [ip, #2664]	@ 0xa68
+ 244:	e59c1a5c 	ldr	r1, [ip, #2652]	@ 0xa5c
+ 248:	e59c0a60 	ldr	r0, [ip, #2656]	@ 0xa60
+ 24c:	ebfffffe 	bl	0 <_picaViewport>
+			24c: R_ARM_CALL	_picaViewport
+ 250:	e594c000 	ldr	ip, [r4]
+ 254:	e59c3b54 	ldr	r3, [ip, #2900]	@ 0xb54
+ 258:	e3130b01 	tst	r3, #1024	@ 0x400
+ 25c:	0affff7f 	beq	60 <_stateFlush+0x60>
+ 260:	eaffff71 	b	2c <_stateFlush+0x2c>
+ 264:	e28c1e4f 	add	r1, ip, #1264	@ 0x4f0
+ 268:	e28c20b0 	add	r2, ip, #176	@ 0xb0
+ 26c:	e59f00a4 	ldr	r0, [pc, #164]	@ 318 <_stateFlush+0x318>
+ 270:	e2811004 	add	r1, r1, #4
+ 274:	ebfffffe 	bl	0 <matrix4x4_multiply>
+			274: R_ARM_CALL	matrix4x4_multiply
+ 278:	e3a01000 	mov	r1, #0
+ 27c:	e3a03004 	mov	r3, #4
+ 280:	e1a00001 	mov	r0, r1
+ 284:	e59f208c 	ldr	r2, [pc, #140]	@ 318 <_stateFlush+0x318>
+ 288:	ebfffffe 	bl	0 <_picaUniformFloat>
+			288: R_ARM_CALL	_picaUniformFloat
+ 28c:	e594c000 	ldr	ip, [r4]
+ 290:	eaffffbc 	b	188 <_stateFlush+0x188>
+ 294:	e28c1e99 	add	r1, ip, #2448	@ 0x990
+ 298:	e2811008 	add	r1, r1, #8
+ 29c:	ebfffffe 	bl	0 <_picaTextureEnvSet>
+			29c: R_ARM_CALL	_picaTextureEnvSet
+ 2a0:	e5941000 	ldr	r1, [r4]
+ 2a4:	e3a03000 	mov	r3, #0
+ 2a8:	e5d129c1 	ldrb	r2, [r1, #2497]	@ 0x9c1
+ 2ac:	e3520000 	cmp	r2, #0
+ 2b0:	0affffa8 	beq	158 <_stateFlush+0x158>
+ 2b4:	e59129d0 	ldr	r2, [r1, #2512]	@ 0x9d0
+ 2b8:	e5922014 	ldr	r2, [r2, #20]
+ 2bc:	e3520000 	cmp	r2, #0
+ 2c0:	0affffa4 	beq	158 <_stateFlush+0x158>
+ 2c4:	e2811d26 	add	r1, r1, #2432	@ 0x980
+ 2c8:	e3833002 	orr	r3, r3, #2
+ 2cc:	e3a00001 	mov	r0, #1
+ 2d0:	e2811004 	add	r1, r1, #4
+ 2d4:	e58d300c 	str	r3, [sp, #12]
+ 2d8:	ebfffffe 	bl	0 <_picaTextureEnvSet>
+			2d8: R_ARM_CALL	_picaTextureEnvSet
+ 2dc:	e5942000 	ldr	r2, [r4]
+ 2e0:	e3a00002 	mov	r0, #2
+ 2e4:	e59219d0 	ldr	r1, [r2, #2512]	@ 0x9d0
+ 2e8:	ebfffffe 	bl	0 <_picaTextureObjectSet>
+			2e8: R_ARM_CALL	_picaTextureObjectSet
+ 2ec:	e59d300c 	ldr	r3, [sp, #12]
+ 2f0:	eaffff9e 	b	170 <_stateFlush+0x170>
+ 2f4:	e3a00003 	mov	r0, #3
+ 2f8:	ebfffffe 	bl	0 <_picaLogicOp>
+			2f8: R_ARM_CALL	_picaLogicOp
+ 2fc:	e594c000 	ldr	ip, [r4]
+ 300:	e59c3b54 	ldr	r3, [ip, #2900]	@ 0xb54
+ 304:	e3130080 	tst	r3, #128	@ 0x80
+ 308:	0affff73 	beq	dc <_stateFlush+0xdc>
+ 30c:	eaffff69 	b	b8 <_stateFlush+0xb8>
+	...
+			314: R_ARM_ABS32	pglState
+			318: R_ARM_ABS32	.bss.matrix_mvp.0
+
+Disassembly of section .text.glDisable:
+
+00000000 <glDisable>:
+   0:	e59f3160 	ldr	r3, [pc, #352]	@ 168 <glDisable+0x168>
+   4:	e1500003 	cmp	r0, r3
+   8:	0a00004e 	beq	148 <glDisable+0x148>
+   c:	8a000010 	bhi	54 <glDisable+0x54>
+  10:	e3500eb9 	cmp	r0, #2960	@ 0xb90
+  14:	0a000039 	beq	100 <glDisable+0x100>
+  18:	8a00002e 	bhi	d8 <glDisable+0xd8>
+  1c:	e243309e 	sub	r3, r3, #158	@ 0x9e
+  20:	e1500003 	cmp	r0, r3
+  24:	0a00001b 	beq	98 <glDisable+0x98>
+  28:	e283302d 	add	r3, r3, #45	@ 0x2d
+  2c:	e1500003 	cmp	r0, r3
+  30:	112fff1e 	bxne	lr
+  34:	e3a01000 	mov	r1, #0
+  38:	e59f312c 	ldr	r3, [pc, #300]	@ 16c <glDisable+0x16c>
+  3c:	e5933000 	ldr	r3, [r3]
+  40:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+  44:	e5c31088 	strb	r1, [r3, #136]	@ 0x88
+  48:	e3822008 	orr	r2, r2, #8
+  4c:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+  50:	e12fff1e 	bx	lr
+  54:	e59f3114 	ldr	r3, [pc, #276]	@ 170 <glDisable+0x170>
+  58:	e1500003 	cmp	r0, r3
+  5c:	0a00002f 	beq	120 <glDisable+0x120>
+  60:	e59f310c 	ldr	r3, [pc, #268]	@ 174 <glDisable+0x174>
+  64:	e1500003 	cmp	r0, r3
+  68:	0a000012 	beq	b8 <glDisable+0xb8>
+  6c:	e59f3104 	ldr	r3, [pc, #260]	@ 178 <glDisable+0x178>
+  70:	e1500003 	cmp	r0, r3
+  74:	112fff1e 	bxne	lr
+  78:	e3a01000 	mov	r1, #0
+  7c:	e59f30e8 	ldr	r3, [pc, #232]	@ 16c <glDisable+0x16c>
+  80:	e5933000 	ldr	r3, [r3]
+  84:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+  88:	e5c3193c 	strb	r1, [r3, #2364]	@ 0x93c
+  8c:	e3822b01 	orr	r2, r2, #1024	@ 0x400
+  90:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+  94:	e12fff1e 	bx	lr
+  98:	e3a01000 	mov	r1, #0
+  9c:	e59f30c8 	ldr	r3, [pc, #200]	@ 16c <glDisable+0x16c>
+  a0:	e5933000 	ldr	r3, [r3]
+  a4:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+  a8:	e5c31081 	strb	r1, [r3, #129]	@ 0x81
+  ac:	e3822020 	orr	r2, r2, #32
+  b0:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+  b4:	e12fff1e 	bx	lr
+  b8:	e3a01000 	mov	r1, #0
+  bc:	e59f30a8 	ldr	r3, [pc, #168]	@ 16c <glDisable+0x16c>
+  c0:	e5933000 	ldr	r3, [r3]
+  c4:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+  c8:	e5c31080 	strb	r1, [r3, #128]	@ 0x80
+  cc:	e3822008 	orr	r2, r2, #8
+  d0:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+  d4:	e12fff1e 	bx	lr
+  d8:	e3500d2f 	cmp	r0, #3008	@ 0xbc0
+  dc:	112fff1e 	bxne	lr
+  e0:	e3a01000 	mov	r1, #0
+  e4:	e59f3080 	ldr	r3, [pc, #128]	@ 16c <glDisable+0x16c>
+  e8:	e5933000 	ldr	r3, [r3]
+  ec:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+  f0:	e5c31090 	strb	r1, [r3, #144]	@ 0x90
+  f4:	e3822010 	orr	r2, r2, #16
+  f8:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+  fc:	e12fff1e 	bx	lr
+ 100:	e3a01000 	mov	r1, #0
+ 104:	e59f3060 	ldr	r3, [pc, #96]	@ 16c <glDisable+0x16c>
+ 108:	e5933000 	ldr	r3, [r3]
+ 10c:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+ 110:	e5c31950 	strb	r1, [r3, #2384]	@ 0x950
+ 114:	e3822004 	orr	r2, r2, #4
+ 118:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+ 11c:	e12fff1e 	bx	lr
+ 120:	e3a01000 	mov	r1, #0
+ 124:	e59f3040 	ldr	r3, [pc, #64]	@ 16c <glDisable+0x16c>
+ 128:	e5933000 	ldr	r3, [r3]
+ 12c:	e59329c4 	ldr	r2, [r3, #2500]	@ 0x9c4
+ 130:	e0832002 	add	r2, r3, r2
+ 134:	e5c219c0 	strb	r1, [r2, #2496]	@ 0x9c0
+ 138:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+ 13c:	e3822040 	orr	r2, r2, #64	@ 0x40
+ 140:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+ 144:	e12fff1e 	bx	lr
+ 148:	e3a01000 	mov	r1, #0
+ 14c:	e59f3018 	ldr	r3, [pc, #24]	@ 16c <glDisable+0x16c>
+ 150:	e5933000 	ldr	r3, [r3]
+ 154:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+ 158:	e5c3109c 	strb	r1, [r3, #156]	@ 0x9c
+ 15c:	e3822c01 	orr	r2, r2, #256	@ 0x100
+ 160:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+ 164:	e12fff1e 	bx	lr
+ 168:	00000be2 	.word	0x00000be2
+ 16c:	00000000 	.word	0x00000000
+			16c: R_ARM_ABS32	pglState
+ 170:	00000de1 	.word	0x00000de1
+ 174:	00008037 	.word	0x00008037
+ 178:	00000c11 	.word	0x00000c11
+
+Disassembly of section .text.glEnable:
+
+00000000 <glEnable>:
+   0:	e59f3160 	ldr	r3, [pc, #352]	@ 168 <glEnable+0x168>
+   4:	e1500003 	cmp	r0, r3
+   8:	0a00004e 	beq	148 <glEnable+0x148>
+   c:	8a000010 	bhi	54 <glEnable+0x54>
+  10:	e3500eb9 	cmp	r0, #2960	@ 0xb90
+  14:	0a000039 	beq	100 <glEnable+0x100>
+  18:	8a00002e 	bhi	d8 <glEnable+0xd8>
+  1c:	e243309e 	sub	r3, r3, #158	@ 0x9e
+  20:	e1500003 	cmp	r0, r3
+  24:	0a00001b 	beq	98 <glEnable+0x98>
+  28:	e283302d 	add	r3, r3, #45	@ 0x2d
+  2c:	e1500003 	cmp	r0, r3
+  30:	112fff1e 	bxne	lr
+  34:	e3a01001 	mov	r1, #1
+  38:	e59f312c 	ldr	r3, [pc, #300]	@ 16c <glEnable+0x16c>
+  3c:	e5933000 	ldr	r3, [r3]
+  40:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+  44:	e5c31088 	strb	r1, [r3, #136]	@ 0x88
+  48:	e3822008 	orr	r2, r2, #8
+  4c:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+  50:	e12fff1e 	bx	lr
+  54:	e59f3114 	ldr	r3, [pc, #276]	@ 170 <glEnable+0x170>
+  58:	e1500003 	cmp	r0, r3
+  5c:	0a00002f 	beq	120 <glEnable+0x120>
+  60:	e59f310c 	ldr	r3, [pc, #268]	@ 174 <glEnable+0x174>
+  64:	e1500003 	cmp	r0, r3
+  68:	0a000012 	beq	b8 <glEnable+0xb8>
+  6c:	e59f3104 	ldr	r3, [pc, #260]	@ 178 <glEnable+0x178>
+  70:	e1500003 	cmp	r0, r3
+  74:	112fff1e 	bxne	lr
+  78:	e3a01001 	mov	r1, #1
+  7c:	e59f30e8 	ldr	r3, [pc, #232]	@ 16c <glEnable+0x16c>
+  80:	e5933000 	ldr	r3, [r3]
+  84:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+  88:	e5c3193c 	strb	r1, [r3, #2364]	@ 0x93c
+  8c:	e3822b01 	orr	r2, r2, #1024	@ 0x400
+  90:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+  94:	e12fff1e 	bx	lr
+  98:	e3a01001 	mov	r1, #1
+  9c:	e59f30c8 	ldr	r3, [pc, #200]	@ 16c <glEnable+0x16c>
+  a0:	e5933000 	ldr	r3, [r3]
+  a4:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+  a8:	e5c31081 	strb	r1, [r3, #129]	@ 0x81
+  ac:	e3822020 	orr	r2, r2, #32
+  b0:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+  b4:	e12fff1e 	bx	lr
+  b8:	e3a01001 	mov	r1, #1
+  bc:	e59f30a8 	ldr	r3, [pc, #168]	@ 16c <glEnable+0x16c>
+  c0:	e5933000 	ldr	r3, [r3]
+  c4:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+  c8:	e5c31080 	strb	r1, [r3, #128]	@ 0x80
+  cc:	e3822008 	orr	r2, r2, #8
+  d0:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+  d4:	e12fff1e 	bx	lr
+  d8:	e3500d2f 	cmp	r0, #3008	@ 0xbc0
+  dc:	112fff1e 	bxne	lr
+  e0:	e3a01001 	mov	r1, #1
+  e4:	e59f3080 	ldr	r3, [pc, #128]	@ 16c <glEnable+0x16c>
+  e8:	e5933000 	ldr	r3, [r3]
+  ec:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+  f0:	e5c31090 	strb	r1, [r3, #144]	@ 0x90
+  f4:	e3822010 	orr	r2, r2, #16
+  f8:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+  fc:	e12fff1e 	bx	lr
+ 100:	e3a01001 	mov	r1, #1
+ 104:	e59f3060 	ldr	r3, [pc, #96]	@ 16c <glEnable+0x16c>
+ 108:	e5933000 	ldr	r3, [r3]
+ 10c:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+ 110:	e5c31950 	strb	r1, [r3, #2384]	@ 0x950
+ 114:	e3822004 	orr	r2, r2, #4
+ 118:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+ 11c:	e12fff1e 	bx	lr
+ 120:	e3a01001 	mov	r1, #1
+ 124:	e59f3040 	ldr	r3, [pc, #64]	@ 16c <glEnable+0x16c>
+ 128:	e5933000 	ldr	r3, [r3]
+ 12c:	e59329c4 	ldr	r2, [r3, #2500]	@ 0x9c4
+ 130:	e0832002 	add	r2, r3, r2
+ 134:	e5c219c0 	strb	r1, [r2, #2496]	@ 0x9c0
+ 138:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+ 13c:	e3822040 	orr	r2, r2, #64	@ 0x40
+ 140:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+ 144:	e12fff1e 	bx	lr
+ 148:	e3a01001 	mov	r1, #1
+ 14c:	e59f3018 	ldr	r3, [pc, #24]	@ 16c <glEnable+0x16c>
+ 150:	e5933000 	ldr	r3, [r3]
+ 154:	e5932b54 	ldr	r2, [r3, #2900]	@ 0xb54
+ 158:	e5c3109c 	strb	r1, [r3, #156]	@ 0x9c
+ 15c:	e3822c01 	orr	r2, r2, #256	@ 0x100
+ 160:	e5832b54 	str	r2, [r3, #2900]	@ 0xb54
+ 164:	e12fff1e 	bx	lr
+ 168:	00000be2 	.word	0x00000be2
+ 16c:	00000000 	.word	0x00000000
+			16c: R_ARM_ABS32	pglState
+ 170:	00000de1 	.word	0x00000de1
+ 174:	00008037 	.word	0x00008037
+ 178:	00000c11 	.word	0x00000c11

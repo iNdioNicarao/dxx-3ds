@@ -1,0 +1,125 @@
+New Features
+  - Host Game Options / Advanced
+
+    - Extra Primaries [Requested by: Many Pilots]
+        Can duplicate all primaries in a level (x2, x3, or x4).  Intended
+        to balance older levels built for Kali's fastjoin.
+
+
+    - Extra Secondaries [Requested by: Lotharbot]
+        Can duplicate all primaries in a level (x2, x3, or x4).  Intended
+        to balance older levels built for Kali's fastjoin.
+
+    - Cap Secondaries [Requested by: Kiln]
+        Can restrict homers and smarts to a max of 6 or 2 (each).  Intended
+        for use in place of a standalone LH version. 
+
+    - Short Spawn Invuln [Requested by: Drakona]
+        If spawn invulns are on, they are 500 ms in duration instead of
+        2000.
+
+    - Respawn Concussions [Requested by: Kiln]
+        Concussions picked up from the level are respawned when fired.
+        Concussions you spawn with don't respawn or drop when you die.
+
+    - Retro Protocol [Requested by: many pilots, mainly Spud & Scoundrl]
+        Enables a number of netcode changes -- biggest is P2P.  Smaller 
+        ones: two way loss monitoring, higher fidelity position packets,
+        removed more short packets, drop out of order position packets,
+        door opening and item pickup packets sent differently. 
+
+    - Allow Colored Dynamic Lighting [Requested by: Jediluke]
+        If unchecked, colored dynamic lighting is disabled (regardless of
+        player's personal setting). 
+
+    - All Ships Blue [Requested by: Jediluke]
+        What it says on the tin. ;)
+
+    - Alternate Colors For Ships 6 & 7 [Requested by: DJCJR]
+        Instead of light orange and light green, ships 6 and 7 are dark
+        purple and white, so they don't get confused with others. 
+
+    - Items Allowed: Vulcan Ammo added [Requested by: Sirius]
+        Can now ban vulcan ammo.
+
+  - Autoselect order: Added Quad Lasers [Requested by: Naphtha]
+        Can now put quad lasers and regular lasers in different spots in 
+        autoselect order. 
+        QUIRK: Quad Lasers start out below your autoselect line.
+        You will probably want to move them. 
+
+  - Energy, Vulcan Ammo, and Low Shield Warnings  [Requested by: Jediluke]
+      Audio and text warnings for low vulcan ammo, energy, and 
+      shields. (Miscellaneous Settings)
+
+  - Network Status Monitor [Requested by: Many Pilots]
+       Lag, Upstream Loss, Downstream Loss, Proxy/Direct shown by player score.  
+       Can turn off with F6. 
+
+  - Pause screen improvements [Requested by: Drakona]
+        Shows game flags, ping to player not server.
+
+  - Framerate is now an in-game option [Requested by: Behemoth]
+
+
+Tweaks
+    - Plasma is slightly quieter [Requested by: Clone7]
+
+    - Reactor shots are slightly quieter [Requested by: Clone7]
+
+    - "Hog File Wrong Size" error message downgraded from error box to log entry
+        [Requested by: Lotharbot, Descentile]
+
+    - "You Failed Sending Important Packets" timeout takes 15 seconds instead of 5
+        [Requested by: Drakona]
+
+    - HUD view that shows all weapons also shows vulcan ammo
+        [Requested by: Lotharbot]
+
+    - Removed code that denies powerup pickup if another player is closer to
+        the powerup.  [Experimental]
+
+
+Bug Fixes
+    - Team Reactor Bug [Requested by: Jediluke]
+        Reactor kills now reduce team score.
+
+    - Ships no longer vibrate in place in a netgame [Requested by: Drakona]
+
+    - Autoselect / Vulcan Ammo [Requested by: Drakona]
+       - Autoselect interacted strangely with picking up vulcan ammo when vulcan 
+         was empty; now behaves as if you just picked up the cannon. 
+
+    - Joystick inputs did not reset on respawn [Requested by: Scoundrl]
+
+    - Reticle drawn strangely at certain screen resolutions [Requested by: Jediluke]
+
+    - Missiles Conserved [Requested by: Gwar, Jediluke]
+        Running over a 4-pack of homers (if you have more than 6) respawns the
+        extras elsewhere in the level. 
+
+
+X6
+    - Added token-based network security
+    - Improved packet validation
+    - Removed game crash related to rank change
+    - Allowed processing pig files of unrecognized sizes (for freescent)
+    - Added command line switch to disable packet logging
+    - Sent object pickup packets direct (if possible) so they arrive sooner
+    - Removed DXX-Rebirth watermark from screenshots without hud
+    - Raised PPS limit to 30 (smoother games on LAN)
+
+X7
+    - Resolved a lot of bugs caused by players who couldn't host
+    - Made proxy connections work again
+    - Resolved slow weapon loss 
+    - Suicides now affect kill goals
+
+X8
+    - Quiet plasma is a misc option (this is not permanent -- for testing/comparison)
+    - Moved rarely-used game hosting options to the bottom of the screen
+    - One more attempt at powerup state -- X7 allowed item buildup on lossy connections
+    - Reversed polarity of net logging command line switch; logging is off by default.  
+      Turn it on with -netlog. 
+    - Disabled lag/loss monitors when scores are in "team" mode
+    - Moved "P" away from lag meter when no loss

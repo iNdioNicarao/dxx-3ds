@@ -1,0 +1,3 @@
+[submodule "libs/picaGL"]
+	path = libs/picaGL
+	url = https://github.com/iNdioNicarao/picaGL-3ds.git

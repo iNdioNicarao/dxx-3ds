@@ -1,0 +1,11 @@
+# Force LF line endings for shell scripts so they run correctly under
+# GNU bash (e.g. inside the Docker build container). Windows core.autocrlf
+# would otherwise rewrite them to CRLF, which breaks `make_cia.sh`
+# (bash chokes on the trailing \r, so bannertool/-rsf args are dropped).
+*.sh text eol=lf
+*.rsf text eol=lf
+# Normalize C/C++ sources to LF so the published tree stays clean regardless of
+# the contributor's local core.autocrlf / editor. The local port history carries
+# CRLF drift in many files; forcing LF here keeps `publish-master` diffs minimal.
+*.c text eol=lf
+*.h text eol=lf
