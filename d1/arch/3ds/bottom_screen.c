@@ -650,19 +650,14 @@ static void draw_key(int bx, int by, int bw, int bh,
 		int fw = (int)strlen(label);
 		int gt = 0, gh_draw = 0, tx = bx, ty = by;
 		if (f && f->ft_w > 0) {
-			int gh = f->ft_h;
-			int div = 1;
-			int avail_w = bw - 12;
-			int avail_h = bh - 6;
-			/* Downsample estimate only drives CENTERING. The blitter below
-			 * draws at 1:1 glyph size for crispness, so the drawn width is
-			 * gamefont_text_width(), which can exceed this estimate. */
-			while (div < 16 &&
-			       ((fw * f->ft_w) / div > avail_w ||
-			        gh / div > avail_h))
-				div++;
-			gt = (fw * f->ft_w) / div;
-			gh_draw = gh / div;
+			/* The blitter (bottom_print_gamefont) draws at 1:1, so the
+			 * TRUE drawn extent is gamefont_text_width(f,label) x f->ft_h.
+			 * Center the label on THAT. The old code divided both by a
+			 * width-fit estimate (div), which varied per label width and
+			 * shifted the vertical baseline between labels of different
+			 * lengths (e.g. "REC" landed higher than "STOP"). */
+			gt = gamefont_text_width(f, label);
+			gh_draw = f->ft_h;
 			tx = bx + (bw - gt) / 2;
 			ty = by + (bh - gh_draw) / 2;
 		} else {
@@ -753,7 +748,7 @@ static int g_del_btn_bbox[4] = {-1,-1,-1,-1};
  * visible 240-wide strip (4 + 74 + 2 + 74 + 2 + 74 = 230) and sit flush at
  * the bottom (by=210, bh=30 -> y 210..240). All share by=210 so their text
  * baselines are identical. */
-static const int DEL_BX = 4,  DEL_BY = 210, DEL_BW = 212, DEL_BH = 30;
+static const int DEL_BX = 54, DEL_BY = 210, DEL_BW = 212, DEL_BH = 30;
 int bottom_pilot_delete_tapped(int enable)
 {
 	/* Redraw only on state change (enable toggled, or never drawn yet). */
