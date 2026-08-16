@@ -1245,10 +1245,6 @@ int FinalCheats(int key)
 void do_cheat_menu()
 {
 	int mmn;
-	/* Disabled: the newmenu CHECK widgets can't be toggled on-device (cheat
-	 * menu checkboxes don't respond to taps). Re-enable by removing this early
-	 * return once the checkbox-toggle path is fixed. */
-	return;
 	newmenu_item mm[16];
 	char score_text[21];
 
@@ -1269,7 +1265,7 @@ void do_cheat_menu()
 
 	mmn = newmenu_do("Wimp Menu",NULL,12, mm, NULL, NULL );
 
-	if (mmn > -1 )  {
+	{
 		if ( mm[0].value )  {
 			Players[Player_num].flags |= PLAYER_FLAGS_INVULNERABLE;
 			Players[Player_num].invulnerable_time = GameTime64+i2f(1000);
