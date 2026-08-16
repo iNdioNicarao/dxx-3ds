@@ -161,6 +161,7 @@ void event_poll()
 	}
 	//---------------------------------------------------------------------------
 	static u32 old_keys = 0;
+	static int rearview_combo_active = 0;
 	u32 current_keys = hidKeysHeld();
 	u32 kDown = current_keys & ~old_keys;
 	u32 kUp = ~current_keys & old_keys;
@@ -171,8 +172,10 @@ void event_poll()
 
 	// New 3DS input mapping (final scheme).
 	// Gameplay actions map to the REAL kc_joystick button numbers (kc_joystick[],
-	// d1/main/kconfig.c): 0=Slide right,3=Slide left,2=Accelerate,1=Reverse,
-	// 5=Fire primary,6=Drop bomb,7=Fire flare,8=Rear view,12=Slide up,13=Slide down,9=Automap.
+	// d1/main/kconfig.c): 0=Slide right,1=Reverse,2=Accelerate,3=Slide left,
+	// 4=Fire secondary (missiles),5=Fire primary,6=Drop bomb,7=Fire flare,
+	// 8=Rear view,9=Automap,12=Slide up,13=Slide down.
+	// Combos: L = fire secondary; ZL = drop bomb; L+R = rear view.
 	// C-Stick -> Slide axes (see kconfig axis remap). Circle Pad -> Turn/Pitch axes.
 	// Menus only understand keyboard KEY_* commands (see newmenu.c), so menu
 	// navigation keys are emitted where needed. START emits Enter: this both
@@ -184,9 +187,9 @@ void event_poll()
 		{ (1<<10), 2, SDLK_UNKNOWN },  // X      -> Accelerate  [kc[2].value=2]
 		{ (1<<1),  1, SDLK_ESCAPE },   // B      -> Reverse (game) / Back (menu) [kc[3].value=1]
 		{ (1<<8),  5, SDLK_UNKNOWN },  // R      -> Fire primary [kc[0].value=5]
-		{ (1<<9),  6, SDLK_UNKNOWN },  // L      -> Drop bomb  [kc[6]? see dump; 6 used as in original]
+		{ (1<<9),  4, SDLK_UNKNOWN },  // L      -> Fire secondary (missiles) [kc[1].value=4]
 		{ (1<<15), 7, SDLK_UNKNOWN },  // ZR     -> Fire flare  [kc[4].value=7]
-		{ (1<<14), 8, SDLK_UNKNOWN },  // ZL     -> Rear view   [kc[7]? original 8]
+		{ (1<<14), 6, SDLK_UNKNOWN },  // ZL     -> Drop bomb  [kc[26].value=6]
 		{ (1<<6), 12, SDLK_UP    },    // D-UP   -> Slide up (vertical) / menu up
 		{ (1<<7), 13, SDLK_DOWN  },    // D-DOWN -> Slide down (vertical) / menu down
 		{ (1<<4), -1, SDLK_RIGHT },    // D-RIGHT-> Next weapon (keys X) / menu right
@@ -265,6 +268,18 @@ void event_poll()
 			if (Automap_active && (btn_map[i].mask == (1<<8))) {	// R unused in map
 				idle = 0; continue;
 			}
+			// L+R combo -> Rear view (joy_btn 8). Intercept before the
+			// generic L emit so L alone = fire secondary, L+R = rear view.
+			if (btn_map[i].mask == (1<<9) && (current_keys & (1<<8))) {
+				SDL_JoyButtonEvent jbe;
+				jbe.type = SDL_JOYBUTTONDOWN;
+				jbe.which = 0;
+				jbe.button = 8;   // Rear view (kc[25].value=8)
+				jbe.state = SDL_PRESSED;
+				joy_button_handler(&jbe);
+				rearview_combo_active = 1;
+				idle = 0; continue;
+			}
 			// v99h: in-game, d-pad UP/DOWN are reserved for cockpit
 			// cycling (handled in the first loop above). Never let them
 			// fall through to the slide joy-buttons (12=Slide up,
@@ -287,6 +302,18 @@ void event_poll()
 			idle = 0;
 		}
 		if (kUp & btn_map[i].mask) {
+			// If L was released while the L+R rear-view combo was active,
+			// emit the rear-view (joy_btn 8) release so it doesn't stick.
+			if (btn_map[i].mask == (1<<9) && rearview_combo_active) {
+				SDL_JoyButtonEvent jbe;
+				jbe.type = SDL_JOYBUTTONUP;
+				jbe.which = 0;
+				jbe.button = 8;
+				jbe.state = SDL_RELEASED;
+				joy_button_handler(&jbe);
+				rearview_combo_active = 0;
+				continue;
+			}
 			if (Automap_active && (btn_map[i].mask == (1<<9) || btn_map[i].mask == (1<<8)))
 				continue;  // no joy-button release needed when repurposed
 			if (btn_map[i].joy_btn != -1) {
