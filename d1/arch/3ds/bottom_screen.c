@@ -652,10 +652,9 @@ static void draw_key(int bx, int by, int bw, int bh,
 		if (f && f->ft_w > 0) {
 			/* The blitter (bottom_print_gamefont) draws at 1:1, so the
 			 * TRUE drawn extent is gamefont_text_width(f,label) x f->ft_h.
-			 * Center the label on THAT. The old code divided both by a
-			 * width-fit estimate (div), which varied per label width and
-			 * shifted the vertical baseline between labels of different
-			 * lengths (e.g. "REC" landed higher than "STOP"). */
+			 * Center on THAT. The old code divided both by a width-fit
+			 * estimate `div`, which varied per label width and shifted the
+			 * vertical baseline — so "REC" landed higher than "STOP". */
 			gt = gamefont_text_width(f, label);
 			gh_draw = f->ft_h;
 			tx = bx + (bw - gt) / 2;
@@ -820,7 +819,7 @@ void bottom_demo_delete_reset(void)
 static int g_menu_btn_prev = 0;
 static int g_menu_btn_state = -1;
 static int g_menu_btn_bbox[4] = {-1,-1,-1,-1};
-static const int MEN_BX = 175, MEN_BY = 210, MEN_BW = 64, MEN_BH = 30;
+static const int MEN_BX = 216, MEN_BY = 210, MEN_BW = 96, MEN_BH = 30;
 int bottom_menu_tapped(void)
 {
 	if (g_menu_btn_state != 1) {
@@ -846,7 +845,7 @@ int bottom_menu_tapped(void)
 static int g_save_btn_prev = 0;
 static int g_save_btn_state = -1;
 static int g_save_btn_bbox[4] = {-1,-1,-1,-1};
-static const int SAV_BX = 0, SAV_BY = 210, SAV_BW = 64, SAV_BH = 30;
+static const int SAV_BX = 8, SAV_BY = 210, SAV_BW = 96, SAV_BH = 30;
 int bottom_save_tapped(void)
 {
 	if (g_save_btn_state != 1) {
@@ -878,7 +877,7 @@ void bottom_save_reset(void)
 static int g_rec_btn_prev = 0;
 static int g_rec_btn_state = -1;
 static int g_rec_btn_bbox[4] = {-1,-1,-1,-1};
-static const int REC_BX = 87, REC_BY = 210, REC_BW = 64, REC_BH = 30;
+static const int REC_BX = 112, REC_BY = 210, REC_BW = 96, REC_BH = 30;
 int bottom_rec_tapped(void)
 {
 	int recording = (Newdemo_state == ND_STATE_RECORDING);
@@ -948,6 +947,39 @@ void bottom_menu_reset(void)
 	g_menu_btn_prev = 0;
 }
 
+/* --- Top-row in-game button: HUD toggle. The 3D depth slider (hardware)
+ * handles stereo separation; only PARALLEL mode is used (toe-in removed). */
+
+#define TOP_BY 4
+#define TOP_BH 30
+
+/* HUD toggle button (far left). */
+static int g_hud_btn_prev = 0;
+static int g_hud_btn_state = -1;
+static int g_hud_btn_bbox[4] = {-1,-1,-1,-1};
+#define HUD_BX 8, HUD_BY, HUD_BW, HUD_BH
+static const int HUD_BY = TOP_BY, HUD_BW = 52, HUD_BH = TOP_BH;
+int bottom_hud_tapped(void)
+{
+	if (g_hud_btn_state != 1) {
+		g_hud_btn_state = 1;
+		draw_key(HUD_BX, BTN_BLUE, "HUD", g_hud_btn_bbox);
+	}
+	touchPosition t;
+	hidTouchRead(&t);
+	int held = (hidKeysHeld() & KEY_TOUCH) && bottom_hit(HUD_BX, &t);
+	int tapped = held && !g_hud_btn_prev;
+	g_hud_btn_prev = held;
+	return tapped ? 1 : 0;
+}
+void bottom_hud_reset(void)
+{
+	g_hud_btn_state = -1;
+	g_hud_btn_prev = 0;
+}
+
+/* --- HUD toggle (top-left) stays; stereo buttons removed: the 3D slider
+ * handles separation, and only PARALLEL mode is used. --- */
 #else
 /* Non-3DS builds: no bottom-screen buttons; Ctrl+D / ESC are real keys there. */
 static inline int bottom_pilot_delete_tapped(int enable) { (void)enable; return 0; }

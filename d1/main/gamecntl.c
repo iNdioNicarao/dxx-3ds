@@ -1241,7 +1241,10 @@ void do_cheat_menu()
 
 	mm[0].type=NM_TYPE_CHECK; mm[0].value=Players[Player_num].flags & PLAYER_FLAGS_INVULNERABLE; mm[0].text="Invulnerability";
 	mm[1].type=NM_TYPE_CHECK; mm[1].value=Players[Player_num].flags & PLAYER_FLAGS_CLOAKED; mm[1].text="Cloaked";
-	mm[2].type=NM_TYPE_CHECK; mm[2].value=0; mm[2].text="All keys";
+	/* Keep a manually-enabled cloak from expiring while treated as a cheat:
+	 * re-arm its timer whenever the menu is (re)opened with it checked. */
+	if (mm[1].value) Players[Player_num].cloak_time = GameTime64;
+	mm[2].type=NM_TYPE_CHECK; mm[2].value=(Players[Player_num].flags & (PLAYER_FLAGS_BLUE_KEY|PLAYER_FLAGS_RED_KEY|PLAYER_FLAGS_GOLD_KEY)) == (PLAYER_FLAGS_BLUE_KEY|PLAYER_FLAGS_RED_KEY|PLAYER_FLAGS_GOLD_KEY); mm[2].text="All keys";
 	mm[3].type=NM_TYPE_NUMBER; mm[3].value=f2i(Players[Player_num].energy); mm[3].text="% Energy"; mm[3].min_value=0; mm[3].max_value=200;
 	mm[4].type=NM_TYPE_NUMBER; mm[4].value=f2i(Players[Player_num].shields); mm[4].text="% Shields"; mm[4].min_value=0; mm[4].max_value=200;
 	mm[5].type=NM_TYPE_TEXT; mm[5].text = "Score:";
@@ -1254,7 +1257,12 @@ void do_cheat_menu()
 
 	mmn = newmenu_do("Wimp Menu",NULL,12, mm, NULL, NULL );
 
+	/* Apply on close. On 3DS the menu is dismissed with B/back, which leaves
+	 * newmenu_do's rval at -1 (no explicit item select). The Wimp/cheat menu
+	 * has no separate "cancel" intent — back = done = apply. mm[] is seeded
+	 * from current player state, so applying when unchanged is a no-op. */
 	{
+	if (1)  {
 		if ( mm[0].value )  {
 			Players[Player_num].flags |= PLAYER_FLAGS_INVULNERABLE;
 			Players[Player_num].invulnerable_time = GameTime64+i2f(1000);
@@ -1274,6 +1282,7 @@ void do_cheat_menu()
 			Players[Player_num].flags &= ~PLAYER_FLAGS_CLOAKED;
 
 		if (mm[2].value) Players[Player_num].flags |= PLAYER_FLAGS_BLUE_KEY | PLAYER_FLAGS_RED_KEY | PLAYER_FLAGS_GOLD_KEY;
+		else Players[Player_num].flags &= ~(PLAYER_FLAGS_BLUE_KEY | PLAYER_FLAGS_RED_KEY | PLAYER_FLAGS_GOLD_KEY);
 		Players[Player_num].energy=i2f(mm[3].value);
 		Players[Player_num].shields=i2f(mm[4].value);
 		Players[Player_num].score = atoi(mm[6].text);

@@ -51,12 +51,11 @@ void stereo_cfg_save_all(void);
 
 // v99k: live stereo-separation preset so the user can SAMPLE depth strength
 // in-game without a rebuild. g_stereo_sep_pct is the max eye separation (as a
-// % of F1_0) at full slider; the actual eye = F1_0 * pct/100 * slider.
-// Cycled with START + D-RIGHT (increase) / D-LEFT (decrease) and persisted to
-// sdmc:/3ds/d1/stereo_sep.cfg so the choice survives reboots. Default 8 (the
-// user's preferred starting point).
-int g_stereo_sep_pct = 8;
-static const int g_sep_presets[] = { 4, 6, 8, 10, 12, 15, 20 };
+// world-unit scale) at full slider; eye = F1_0 * (pct*0.35) * slider.
+// Cycled with the 3DS depth slider (hardware) and persisted to
+// sdmc:/3ds/d1/stereo_sep.cfg so the choice survives reboots. Default 4.
+int g_stereo_sep_pct = 4;
+static const int g_sep_presets[] = { 1, 2, 3, 4, 5, 6 };
 static const int g_sep_npresets = (int)(sizeof(g_sep_presets)/sizeof(g_sep_presets[0]));
 
 void stereo_sep_load(void)
@@ -85,58 +84,22 @@ void stereo_sep_cycle(int step)
 	HUD_init_message_literal(HM_DEFAULT, msg);
 }
 
-// v99k: stereo METHOD (0 = parallel/translate, 1 = toe-in/converged) and
-// CONVERGENCE distance (world units; the depth plane that maps to zero
-// parallax). Toe-in rotates each eye toward the convergence point so near
-// AND far objects read with more even depth (parallel makes far look flat).
-int g_stereo_method = 0;          // default parallel (current behavior)
-int g_stereo_conv = 200;          // default convergence (world units)
-static const int g_conv_presets[] = { 50, 100, 200, 400, 800 };
-static const int g_conv_npresets = (int)(sizeof(g_conv_presets)/sizeof(g_conv_presets[0]));
-
-void stereo_method_toggle(void)
-{
-	g_stereo_method = g_stereo_method ? 0 : 1;
-	stereo_cfg_save_all();
-	char msg[48];
-	snprintf(msg, sizeof(msg), "Stereo method: %s", g_stereo_method ? "TOE-IN" : "PARALLEL");
-	HUD_init_message_literal(HM_DEFAULT, msg);
-}
-
-void stereo_conv_cycle(int step)
-{
-	int idx = 0;
-	for (int i = 0; i < g_conv_npresets; i++)
-		if (g_conv_presets[i] == g_stereo_conv) { idx = i; break; }
-	idx += step;
-	if (idx < 0) idx = 0;
-	if (idx >= g_conv_npresets) idx = g_conv_npresets - 1;
-	g_stereo_conv = g_conv_presets[idx];
-	stereo_cfg_save_all();
-	char msg[48];
-	snprintf(msg, sizeof(msg), "Convergence: %d", g_stereo_conv);
-	HUD_init_message_literal(HM_DEFAULT, msg);
-}
-
-// Load method+conv from the same cfg file (format: "sep\nmethod\nconv\n").
+// Load/save separation only (parallel mode is the only stereo mode now).
 void stereo_cfg_load_all(void)
 {
 	FILE *f = fopen("sdmc:/3ds/d1/stereo_sep.cfg", "r");
 	if (f) {
-		int a=0,b=0,c=0;
+		int a=0;
 		if (fscanf(f, "%d", &a) == 1) { g_stereo_sep_pct = a; }
-		if (fscanf(f, "%d", &b) == 1) { g_stereo_method = b ? 1 : 0; }
-		if (fscanf(f, "%d", &c) == 1) { g_stereo_conv = c; }
 		fclose(f);
 	}
 }
 
-// Save all three values.
 void stereo_cfg_save_all(void)
 {
 	FILE *f = fopen("sdmc:/3ds/d1/stereo_sep.cfg", "w");
 	if (f) {
-		fprintf(f, "%d\n%d\n%d\n", g_stereo_sep_pct, g_stereo_method, g_stereo_conv);
+		fprintf(f, "%d\n", g_stereo_sep_pct);
 		fclose(f);
 	}
 }
@@ -720,10 +683,16 @@ void game_render_frame_mono(int flip)
 			// stale frame" bug. Reset to 0 so the eye presents go through,
 			// then set to 1 only after the pair to suppress the outer flip.
 			g_stereo_active = 0;
-			// eye separation = pct% of F1_0 at full slider (v99k: live
-			// preset, cycled with START+D-RIGHT/LEFT, persisted to SD).
-			// 0 at off-detent. Scales with the slider.
-			eye = (fix)(F1_0 * (g_stereo_sep_pct / 100.0f) * slider);
+			// eye separation set by the 3DS hardware depth slider
+			// (parallel-only stereo); the preset below is the max the
+			// slider can reach. Persisted to sdmc:/3ds/d1/stereo_sep.cfg.
+			// eye separation in WORLD units (not percent): presets
+			// {1,2,3,4,5,6} are world-unit magnitudes. A /100 percent
+			// scale made them ~0.2 units -> sub-pixel, invisible 3D.
+			// Scale by 0.35 so pct=6 ~= 2.1 units (gentle max) and
+			// pct=1 ~= 0.35 units (very subtle floor). Slider 0..1
+			// scales depth continuously on top of the preset.
+			eye = (fix)(F1_0 * (g_stereo_sep_pct * 0.35f) * slider);
 			// LEFT eye (+offset) -> GFX_LEFT, then cockpit+HUD, then present
 			pglSelectScreen(0/*GFX_TOP*/, 0/*GFX_LEFT*/);
 			render_frame(eye);
@@ -736,6 +705,8 @@ void game_render_frame_mono(int flip)
 			update_cockpits();
 			if (PlayerCfg.CockpitMode[1]==CM_FULL_COCKPIT || PlayerCfg.CockpitMode[1]==CM_STATUS_BAR)
 				render_gauges();
+			else if (PlayerCfg.CockpitMode[1]==CM_FULL_SCREEN)
+				game_draw_hud_stuff();
 			ogl_swap_buffers_internal();
 			// RIGHT eye (-offset) -> GFX_RIGHT, then cockpit+HUD, then present pair
 			pglSelectScreen(0/*GFX_TOP*/, 1/*GFX_RIGHT*/);
@@ -743,6 +714,8 @@ void game_render_frame_mono(int flip)
 			update_cockpits();
 			if (PlayerCfg.CockpitMode[1]==CM_FULL_COCKPIT || PlayerCfg.CockpitMode[1]==CM_STATUS_BAR)
 				render_gauges();
+			else if (PlayerCfg.CockpitMode[1]==CM_FULL_SCREEN)
+				game_draw_hud_stuff();
 			ogl_swap_buffers_internal();
 			// Suppress the OUTER gr_flip() present: the eye pair above
 			// already presented (LEFT then RIGHT) via pglSwapBuffers' stereo

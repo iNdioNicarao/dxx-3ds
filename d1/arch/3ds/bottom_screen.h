@@ -98,6 +98,14 @@ void bottom_rec_reset(void);
 int bottom_scores_rst_tapped(int enable);
 void bottom_scores_rst_reset(void);
 
+/* In-game top-row HUD toggle button (3DS only), drawn along the TOP of the
+ * bottom screen. Returns 1 on a fresh tap; the caller cycles HudMode.
+ * reset() clears dirty-state for the next game frame. */
+int bottom_hud_tapped(void);
+void bottom_hud_reset(void);
+/* Stereo separation is set by the 3DS hardware depth slider (PARALLEL only);
+ * the on-screen +/- buttons were removed. */
+
 /* Draw a string using the real Descent game font (GAME_FONT) into the bottom
  * buffer (3DS only). Falls back to nothing if the font isn't loaded yet.
  * Mirrors the 8x8 blitter's X-orientation so glyphs stay upright after the

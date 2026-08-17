@@ -810,10 +810,10 @@ void show_controls_3ds()
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "A .............. Slide right";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "Y .............. Slide left";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "R .............. Fire primary";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "L .............. Fire missiles";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "L .............. Fire secondary (missiles)";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "ZL ............. Drop bomb";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "ZR ............. Fire flare";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "L + R .......... Rear view";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "ZR ............. Fire flare";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "D-Pad Up/Down .. Cycle cockpit view";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "MENUS";
@@ -821,13 +821,20 @@ void show_controls_3ds()
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "D-Pad .......... Navigate    START .... Back";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "AUTOMAP (SELECT)";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "L .............. Zoom in     R ....... Zoom out";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "Circle Pad ..... Zoom in / out";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "SYSTEM";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "START .......... Pause";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "START + X ...... Quick Save";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "START + Y ...... Quick Load";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "START + L ...... This controls screen";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "BOTTOM SCREEN";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "HUD ............ Cycle HUD info";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "MENU ........... Main menu (pause)";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "SAVE ........... Quick save (F2)";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "REC ............ Record demo (F5)";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "3D depth ...... 3DS slider (no buttons)";
 
 	newmenu_dotiny( NULL, "3DS CONTROLS", nitems, m, 0, free_help, NULL );
 }
@@ -1117,6 +1124,7 @@ int game_handler(window *wind, d_event *event, void *data)
 				bottom_menu_reset();
 				bottom_save_reset();
 				bottom_rec_reset();
+				bottom_hud_reset();
 				bottom_clear(0);
 				bs_was_playback = 1;
 			}
@@ -1153,7 +1161,13 @@ int game_handler(window *wind, d_event *event, void *data)
 					newdemo_start_recording();
 				return 1;
 			}
-			bottom_screen_present();
+			/* Top-row HUD toggle button. */
+			if (bottom_hud_tapped()) {
+				PlayerCfg.HudMode = (PlayerCfg.HudMode + 1) % GAUGE_HUD_NUMMODES;
+				write_player_file();
+				return 1;
+			}
+				bottom_screen_present();
 		}
 #endif
 			return ReadControls(event);
@@ -1275,6 +1289,7 @@ void game_leave_menus(void)
 	texmerge_flush(); /* rebuild merged wall bitmaps from fresh GameBitmaps[] */
 	ogl_invalidate_textures(); /* force re-upload: picaGL texture state does not survive applets/menus */
 	stereo_resume();  /* let the per-frame slider logic re-engage stereo if the 3D slider is still up */
+	bottom_hud_reset(); /* re-arm the top-row HUD button so it redraws after a menu/resume cycle */
 #endif
 
 	while ((wind = window_get_front()) && (wind != Game_wind)) // go through all windows and actually close them if they want to

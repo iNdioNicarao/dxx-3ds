@@ -32,8 +32,6 @@ extern void show_controls_3ds(void);
 extern void cycle_cockpit_next(void);
 extern void cycle_cockpit_prev(void);
 extern void stereo_sep_cycle(int step);
-extern void stereo_method_toggle(void);
-extern void stereo_conv_cycle(int step);
 extern int in_game;
 extern int do_game_pause(void);
 
@@ -220,16 +218,6 @@ void event_poll()
 					show_controls_3ds();
 				else if (current_keys & (1<<14))	// START + ZL = toggle benchmark
 					benchmark_toggle();
-				else if (current_keys & (1<<6))	// START + D-UP = more depth
-					stereo_sep_cycle(+1);
-				else if (current_keys & (1<<7))	// START + D-DOWN = less depth
-					stereo_sep_cycle(-1);
-				else if (current_keys & (1<<15))	// START + ZR = toggle method
-					stereo_method_toggle();
-				else if (current_keys & (1<<8))	// START + L = less convergence
-					stereo_conv_cycle(-1);
-				else if (current_keys & (1<<9))	// START + R = more convergence
-					stereo_conv_cycle(+1);
 				else {
 					/* Bare START: pause ONLY when actually in the
 					 * live game (Game_wind is the front window).
@@ -268,6 +256,11 @@ void event_poll()
 			if (Automap_active && (btn_map[i].mask == (1<<8))) {	// R unused in map
 				idle = 0; continue;
 			}
+			// v99h: in-game, d-pad UP/DOWN are reserved for cockpit
+			// cycling (handled in the first loop above). Never let them
+			// fall through to the slide joy-buttons (12=Slide up,
+			// 13=Slide down) here, or pressing up/down would both cycle
+			// the cockpit AND slide vertically. Gate slide out in-game.
 			// L+R combo -> Rear view (joy_btn 8). Intercept before the
 			// generic L emit so L alone = fire secondary, L+R = rear view.
 			if (btn_map[i].mask == (1<<9) && (current_keys & (1<<8))) {
@@ -280,11 +273,6 @@ void event_poll()
 				rearview_combo_active = 1;
 				idle = 0; continue;
 			}
-			// v99h: in-game, d-pad UP/DOWN are reserved for cockpit
-			// cycling (handled in the first loop above). Never let them
-			// fall through to the slide joy-buttons (12=Slide up,
-			// 13=Slide down) here, or pressing up/down would both cycle
-			// the cockpit AND slide vertically. Gate slide out in-game.
 			if (btn_map[i].joy_btn != -1 &&
 			    !(in_game && (btn_map[i].joy_btn == 12 || btn_map[i].joy_btn == 13))) {
 				SDL_JoyButtonEvent jbe;

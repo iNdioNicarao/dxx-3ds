@@ -1430,52 +1430,7 @@ void render_frame(fix eye_offset)
 		vm_matrix_x_matrix(&viewm,&Viewer->orient,&headm);
 		g3_set_view_matrix(&Viewer_eye,&viewm,Render_zoom);
 	} else {
-#ifdef __3DS__
-		// v99k: toe-in stereo. For method=1, rotate each eye toward the
-		// convergence plane instead of (only) translating parallel. This
-		// puts zero parallax at g_stereo_conv world units, so near AND far
-		// objects read with more even depth (parallel makes far look flat).
-		// eye_offset is the FULL separation (+left / -right). Half-offset
-		// / conv = yaw toward convergence. Sign chosen so left eye yaws in.
-		{
-		extern int g_stereo_method;
-		extern int g_stereo_conv;
-		if (g_stereo_method && eye_offset) {
-			// v99k FIX (take 2): use the project's own fix_atan2() --
-			// NOT atan2f(), which is NOT provided by the linked newlib
-			// on this toolchain (verified: 0 occurrences in libm.a).
-			// Calling atan2f left `ang` as garbage -> av.h garbage ->
-			// degenerate view matrix -> GPU hang (the freeze).
-			// fix_atan2(cos,sin) returns fixang directly (the type
-			// vm_angles_2_matrix expects for a->h). eye_offset is fix16
-			// (F1_0=1.0 world unit); g_stereo_conv is integer world
-			// units -> scale it to fix16 before the ratio.
-			fix half = eye_offset / 2;                 // fix16, half-separation
-			fix conv_fix = (fix)((long)g_stereo_conv * (long)F1_0); // fix16 world units
-			vms_angvec av;
-			av.p = 0; av.b = 0;
-			if (conv_fix != 0) {
-				fixang h = fix_atan2(conv_fix, half); // atan(half/conv), fixang
-				// Defensive clamp: never let the toe-in yaw exceed
-				// +/-15deg. A degenerate/extreme angle would feed a
-				// near-singular view matrix to the GPU and could hang
-				// the PICA200 (catastrophic on 3DS). 0x8000 = 90deg.
-				if (h > 0x1555) h = 0x1555;       // +15deg
-				else if (h < (fixang)-0x1555) h = (fixang)-0x1555;
-				av.h = h;
-			} else
-				av.h = 0;
-			vms_matrix headm, viewm;
-			vm_angles_2_matrix(&headm, &av);
-			vm_matrix_x_matrix(&viewm, &Viewer->orient, &headm);
-			g3_set_view_matrix(&Viewer_eye, &viewm, Render_zoom);
-		} else {
 		g3_set_view_matrix(&Viewer_eye,&Viewer->orient,Render_zoom);
-		}
-		}
-#else
-		g3_set_view_matrix(&Viewer_eye,&Viewer->orient,Render_zoom);
-#endif
 	}
 
 	if (Clear_window == 1) {
