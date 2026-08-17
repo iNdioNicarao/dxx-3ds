@@ -1262,7 +1262,6 @@ void do_cheat_menu()
 	 * has no separate "cancel" intent — back = done = apply. mm[] is seeded
 	 * from current player state, so applying when unchanged is a no-op. */
 	{
-	if (1)  {
 		if ( mm[0].value )  {
 			Players[Player_num].flags |= PLAYER_FLAGS_INVULNERABLE;
 			Players[Player_num].invulnerable_time = GameTime64+i2f(1000);
