@@ -1006,7 +1006,32 @@ int newmenu_key_command(window *wind, d_event *event, newmenu *menu)
 #endif
 		case KEY_ENTER:
 		case KEY_PADENTER:
-			if ( (menu->citem>-1) && (item->type==NM_TYPE_INPUT_MENU) && (item->group==0))	{
+			// 3DS: A button maps to KEY_ENTER in menus. Make A toggle a
+			// CHECK/RADIO item in place (stay open) so cheats are usable
+			// without a keyboard. Other item types keep normal select/close.
+			if (menu->citem > -1) {
+				switch (item->type) {
+				case NM_TYPE_CHECK:
+					item->value = item->value ? 0 : 1;
+					if (menu->is_scroll_box)
+						menu->last_scroll_check = -1;
+					changed = 1;
+					break;
+				case NM_TYPE_RADIO:
+					for (i = 0; i < menu->nitems; i++) {
+						if ((i != menu->citem) && (menu->items[i].type == NM_TYPE_RADIO) && (menu->items[i].group == item->group) && (menu->items[i].value))
+							menu->items[i].value = 0;
+					}
+					item->value = 1;
+					changed = 1;
+					break;
+				default:
+					break;
+				}
+				if (item->type == NM_TYPE_CHECK || item->type == NM_TYPE_RADIO)
+					break;	// toggled in place; do not close menu
+			}
+			if ( (menu->citem>-1) && (item->type==NM_TYPE_INPUT_MENU) && (item->group==0)){
 				item->group = 1;
 				if ( !d_strnicmp( item->saved_text, TXT_EMPTY, strlen(TXT_EMPTY) ) )	{
 					item->text[0] = 0;
