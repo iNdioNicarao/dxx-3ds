@@ -31,46 +31,11 @@ code lives in [`docs/stereo-3d-logic-map.md`](docs/stereo-3d-logic-map.md).
 
 ---
 
-## What's new in v2.0.7
+## What's new
 
-This release folds the stereoscopic-3D work into `master` and fixes a batch of
-on-device bugs found during hardware testing. Since the previous published
-release, the changes are:
-
-- **Stereoscopic 3D is now in `master`** (was `stereo-3d`). Raise the 3DS 3D
-  slider to enable depth; lower it for mono. Live controls: `START`+`ZR`
-  toggles PARALLEL ↔ TOE-IN, `START`+`D-UP`/`D-DOWN` changes separation,
-  `START`+`L`/`R` changes convergence. All overlays force mono so they never
-  present to the hidden stereo bank.
-- **Power-off crash fixed.** The NDSP audio thread is stopped *before*
-  `pglSetPoweredOff()`, so closing the game / powering off no longer ARM11-crashes.
-- **On-screen keyboard (OSK).** A 3DS software keyboard is now wired in, so you
-  can enter a pilot name and create **multiple named pilots / save slots**
-  (the previous release had no text entry, so named pilots / saved games weren't
-  possible).
-- **Named saves work now.** Pilot saves persist to the SD card; the prior release
-  couldn't save them because there was no keyboard to name a pilot.
-- **Demo playback & recording.** Demo playback from in-game and demo *recording*
-  both work now — neither was supported in the previous release.
-- **Demo → New Game banner fixed.** The "Prepare for Descent" banner after a
-  demo / other stereo session no longer alternates with (or hides behind) the
-  game view.
-- **Automap overlay fixed.** Opening the automap over live gameplay with the 3D
-  slider up no longer flickers/alternates with the game (it now forces mono for
-  its duration).
-- **Lid close/open fixed.** Closing the 3DS lid and reopening no longer leaves
-  both screens black (stereo GPU state is reset on wake).
-- **Quit → New Game fixes.** The simulator no longer stays frozen, flight
-  controls are alive on the new game, and quick-load no longer shows black walls
-  (texture handles are invalidated / re-uploaded).
-- **Build hygiene.** Version is `2.0.7` and the CIA is named `d1x-3ds-2.0.7.cia`;
-  the RSF pins a constant `Version : 10903` so the Title ID stays
-  `0x000400000FDDEB97` (the build replaces the existing icon instead of adding a
-  second one). The graphics backend (`libs/picaGL`) is a pinned submodule fork.
-
-> **Known limitation carried to next release:** the in-game **Cheat menu is
-> disabled in v2.0.7** — its checkbox widgets don't respond to touch on-device.
-> It will return (fixed) in a later release.
+Releases and full changelogs live on the
+[GitHub releases page](https://github.com/iNdioNicarao/dxx-3ds/releases).
+Current version: **2.0.9**.
 
 ---
 
@@ -222,10 +187,9 @@ These were broken or missing in the original 3DS port and are now working:
   Renders the scene twice per frame → roughly half FPS in heavy scenes with the
   slider up.
 - **Original (Old) 3DS / 2DS** — untested; see below.
-- **Cheat menu** — disabled in v2.0.7. Its `newmenu` checkbox widgets can't be
-  toggled on-device (the cheat menu is on the top screen, which has no touch —
-  the toggle relies on input the current build doesn't route to those widgets).
-  Re-enabled in a later release once the toggle path is fixed.
+- **Cheat menu** — usable with the gamepad: the A button toggles
+  CHECK/RADIO items in place (no keyboard required). It is on the top screen
+  (no touch), so use the 3DS face buttons / d-pad to navigate and toggle.
 - **Changing graphical settings** — toggling in-game graphical options (cockpit
   mode, transparency/lighting effects, etc.) may cause on-screen graphical
   corruption. Reload the level or restart the app to clear it.
