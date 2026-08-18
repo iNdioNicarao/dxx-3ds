@@ -161,6 +161,22 @@ the song names in the list.
 > **Cockpit views:** full cockpit → status bar → full screen (cycles).
 > FPS is shown on the death screen regardless of cockpit mode.
 
+### Bottom-screen minimap (live tactical radar)
+
+The bottom screen shows an **always-on live minimap** of the current
+level while you play (separate from the full-screen `SELECT` automap,
+which remains the big study map). It draws room **outlines** (not every
+segment edge), **gold doors**, nearby **object blips** (hostages,
+power-ups, robots, players) with short labels, and a **heading tick**
+showing where you're facing.
+
+- **Drag** on the minimap to **rotate** the view (so you can orient it
+  however you like). Dragging is confined to the map area, so the
+  edge buttons keep working.
+- **Double-tap** the minimap to **recenter** it on your position.
+- Only objects within a local radius are shown, to keep it readable.
+- Updates at ~30 Hz.
+
 ### Stereoscopic 3D controls (3D-slider-gated, in `master`)
 Hold `START` and press:
 

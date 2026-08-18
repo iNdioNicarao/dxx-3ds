@@ -20,6 +20,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "dxxerror.h"
 #include "3d.h"
@@ -38,6 +39,8 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "menu.h"
 #include "screens.h"
 #include "textures.h"
+#include "bottom_screen.h"	/* bottom_blit_canvas_region / bottom_clear_rect (3DS minimap) */
+#include "wall.h"		/* WALL_IS_DOORWAY / WID_FLY_FLAG (minimap door coloring) */
 #include "mouse.h"
 #include "timer.h"
 #include "segpoint.h"
@@ -254,6 +257,98 @@ void name_frame(automap *am)
 	gr_printf((SWIDTH/64),(SHEIGHT/48),"%s", name_level);
 }
 
+/* Render the 6DOF automap into am->automap_view ONLY (no top-screen UI).
+ * Shared by the full SELECT automap (draw_automap) and the always-on
+ * bottom-screen minimap. Caller decides what to do with the canvas. */
+void automap_render_map(automap *am)
+{
+	int i;
+	int color;
+	object * objp;
+	g3s_point sphere_point;
+
+	gr_set_current_canvas(&am->automap_view);
+
+	gr_clear_canvas(BM_XRGB(0,0,0));
+
+	g3_start_frame();
+	render_start_frame();
+
+	if (!PlayerCfg.AutomapFreeFlight)
+		vm_vec_scale_add(&am->view_position,&am->view_target,&am->viewMatrix.fvec,-am->viewDist);
+
+	g3_set_view_matrix(&am->view_position,&am->viewMatrix,am->zoom);
+
+	// 3DS: rebuild the edge list every frame so the map reveals as
+	// Automap_visited[] is updated during flight. (Upstream rebuilds on a
+	// "visited changed" event; this port only built it once at open, leaving
+	// every edge frozen as EF_FRONTIER and nothing ever drawn.)
+	automap_build_edge_list(am);
+	adjust_segment_limit(am, am->segment_limit);
+
+	draw_all_edges(am);
+
+	selected_player_rgb = player_rgb;
+	// Draw player...
+#ifdef NETWORK
+	if(Netgame.BlackAndWhitePyros)
+		selected_player_rgb = player_rgb_alt;
+	if (Game_mode & GM_TEAM)
+		color = get_team(Player_num);
+	else
+#endif
+		color = Player_num;	// Note link to above if!
+
+	gr_setcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b));
+	draw_player(&Objects[Players[Player_num].objnum]);
+
+	// Draw player(s)...
+#ifdef NETWORK
+	if ( (Game_mode & (GM_TEAM | GM_MULTI_COOP)) || (Netgame.game_flags & NETGAME_FLAG_SHOW_MAP) )	{
+		for (i=0; i<N_players; i++)		{
+			if ( (i != Player_num) && ((Game_mode & GM_MULTI_COOP) || (get_team(Player_num) == get_team(i)) || (Netgame.game_flags & NETGAME_FLAG_SHOW_MAP)) )	{
+				if ( Objects[Players[i].objnum].type == OBJ_PLAYER )	{
+					if (Game_mode & GM_TEAM)
+						color = get_team(i);
+					else
+						color = i;
+					gr_setcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b));
+					draw_player(&Objects[Players[i].objnum]);
+				}
+			}
+		}
+	}
+#endif
+
+	objp = &Objects[0];
+	for (i=0;i<=Highest_object_index;i++,objp++) {
+		switch( objp->type )	{
+		case OBJ_HOSTAGE:
+			gr_setcolor(am->hostage_color);
+			g3_rotate_point(&sphere_point,&objp->pos);
+			g3_draw_sphere(&sphere_point,objp->size);
+			break;
+		case OBJ_POWERUP:
+			if ( Automap_visited[objp->segnum] )	{
+				if ( (objp->id==POW_KEY_RED) || (objp->id==POW_KEY_BLUE) || (objp->id==POW_KEY_GOLD) )	{
+					switch (objp->id) {
+					case POW_KEY_RED:		gr_setcolor(BM_XRGB(63, 5, 5));	break;
+					case POW_KEY_BLUE:	gr_setcolor(BM_XRGB(5, 5, 63)); break;
+					case POW_KEY_GOLD:	gr_setcolor(BM_XRGB(63, 63, 10)); break;
+					default:
+						Error("Illegal key type: %i", objp->id);
+					}
+					g3_rotate_point(&sphere_point,&objp->pos);
+					g3_draw_sphere(&sphere_point,objp->size*4);
+				}
+			}
+			break;
+		}
+	}
+
+	g3_end_frame();
+}
+
 void draw_automap(automap *am)
 {
 	int i;
@@ -287,87 +382,8 @@ void draw_automap(automap *am)
 		gr_string(265*(SWIDTH/640.0), 44*(SHEIGHT/480.0), TXT_SLIDE_UPDOWN);
 		gr_string(265*(SWIDTH/640.0), 61*(SHEIGHT/480.0), "F9/F10 Changes viewing distance");
 	}
-	
-	gr_set_current_canvas(&am->automap_view);
 
-	gr_clear_canvas(BM_XRGB(0,0,0));
-
-	g3_start_frame();
-	render_start_frame();
-
-	if (!PlayerCfg.AutomapFreeFlight)
-		vm_vec_scale_add(&am->view_position,&am->view_target,&am->viewMatrix.fvec,-am->viewDist);
-
-	g3_set_view_matrix(&am->view_position,&am->viewMatrix,am->zoom);
-
-	// 3DS: rebuild the edge list every frame so the map reveals as
-	// Automap_visited[] is updated during flight. (Upstream rebuilds on a
-	// "visited changed" event; this port only built it once at open, leaving
-	// every edge frozen as EF_FRONTIER and nothing ever drawn.)
-	automap_build_edge_list(am);
-	adjust_segment_limit(am, am->segment_limit);
-
-	draw_all_edges(am);
-
-	selected_player_rgb = player_rgb;
-	// Draw player...
-#ifdef NETWORK
-	if(Netgame.BlackAndWhitePyros) 
-		selected_player_rgb = player_rgb_alt; 
-	if (Game_mode & GM_TEAM)
-		color = get_team(Player_num);
-	else
-#endif	
-		color = Player_num;	// Note link to above if!
-
-	gr_setcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b));
-	draw_player(&Objects[Players[Player_num].objnum]);
-
-	// Draw player(s)...
-#ifdef NETWORK
-	if ( (Game_mode & (GM_TEAM | GM_MULTI_COOP)) || (Netgame.game_flags & NETGAME_FLAG_SHOW_MAP) )	{
-		for (i=0; i<N_players; i++)		{
-			if ( (i != Player_num) && ((Game_mode & GM_MULTI_COOP) || (get_team(Player_num) == get_team(i)) || (Netgame.game_flags & NETGAME_FLAG_SHOW_MAP)) )	{
-				if ( Objects[Players[i].objnum].type == OBJ_PLAYER )	{
-					if (Game_mode & GM_TEAM)
-						color = get_team(i);
-					else
-						color = i;
-					gr_setcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b));
-					draw_player(&Objects[Players[i].objnum]);
-				}
-			}
-		}
-	}
-#endif
-
-	objp = &Objects[0];
-	for (i=0;i<=Highest_object_index;i++,objp++) {
-		switch( objp->type )	{
-		case OBJ_HOSTAGE:
-			gr_setcolor(am->hostage_color);
-			g3_rotate_point(&sphere_point,&objp->pos);
-			g3_draw_sphere(&sphere_point,objp->size);	
-			break;
-		case OBJ_POWERUP:
-			if ( Automap_visited[objp->segnum] )	{
-				if ( (objp->id==POW_KEY_RED) || (objp->id==POW_KEY_BLUE) || (objp->id==POW_KEY_GOLD) )	{
-					switch (objp->id) {
-					case POW_KEY_RED:		gr_setcolor(BM_XRGB(63, 5, 5));	break;
-					case POW_KEY_BLUE:	gr_setcolor(BM_XRGB(5, 5, 63)); break;
-					case POW_KEY_GOLD:	gr_setcolor(BM_XRGB(63, 63, 10)); break;
-					default:
-						Error("Illegal key type: %i", objp->id);
-					}
-					g3_rotate_point(&sphere_point,&objp->pos);
-					g3_draw_sphere(&sphere_point,objp->size*4);	
-				}
-			}
-			break;
-		}
-	}
-
-	g3_end_frame();
+	automap_render_map(am);
 
 	name_frame(am);
 
@@ -1187,6 +1203,217 @@ void automap_build_edge_list(automap *am)
 			}
 			if (!(e->flags & EF_DEFINING))
 				break;
-		}
-	}
-}
+			}
+			}
+			}
+
+			#ifdef __3DS__
+			/* --- Always-on bottom-screen automap minimap (Scope A) ---
+			 * Software CPU renderer: the 3DS bottom screen is libctru-managed
+			 * and cannot be targeted by picaGL, so the GL automap path
+			 * (ogl_draw_line_vec) cannot draw here. Instead we project each
+			 * visited segment's vertices by the player's 6DOF orientation on
+			 * the CPU and draw lines straight into the bottom RGB565 buffer.
+			 * This is a correct (not top-down) 6DOF minimap. ~24 Hz, centered
+			 * in the safe area, never overlapping the edge button rows. */
+			#define MINI_X 16
+			#define MINI_Y 38
+			#define MINI_W 288
+			#define MINI_H 168
+			#define MINI_CX (MINI_X + MINI_W/2)
+			#define MINI_CY (MINI_Y + MINI_H/2)
+			#define MINI_FOCAL 1	/* pixels per world-unit (orthographic radar scale) */
+			#define MINI_RANGE_UNITS 400	/* only draw segments within this many world-units */
+
+			static fix64 g_minimap_last = 0;
+			static double g_mini_yaw = 0;		/* user touch-drag rotation */
+			static int g_mini_dragging = 0;
+			static int g_mini_last_tx = 0;
+
+			/* Project a world point into minimap-local logical coords.
+			 * Orthographic (constant scale) so the radar shows several
+			 * segments without extreme perspective zoom. A user yaw offset
+			 * (g_mini_yaw, set by touch-drag) spins the map in its plane so
+			 * it reads like a real map. Returns 1 if drawable, 0 if behind. */
+			static int mini_project(const vms_vector *world, vms_vector *out)
+			{
+				vms_vector rel, cam;
+				double rx, ry, cyaw, syaw;
+				rel.x = world->x - ConsoleObject->pos.x;
+				rel.y = world->y - ConsoleObject->pos.y;
+				rel.z = world->z - ConsoleObject->pos.z;
+				cam.x = vm_vec_dot(&rel, &ConsoleObject->orient.rvec);
+				cam.y = vm_vec_dot(&rel, &ConsoleObject->orient.uvec);
+				cam.z = vm_vec_dot(&rel, &ConsoleObject->orient.fvec);
+				if (cam.z >= 0) return 0;	/* behind camera */
+				rx = (double)cam.x / 65536.0;
+				ry = (double)cam.y / 65536.0;
+				cyaw = cos(g_mini_yaw);
+				syaw = sin(g_mini_yaw);
+				rx = rx * cyaw - ry * syaw;
+				ry = rx * syaw + ry * cyaw;
+				out->x = MINI_CX + (int)(rx * MINI_FOCAL);
+				out->y = MINI_CY - (int)(ry * MINI_FOCAL);
+				return 1;
+			}
+
+			/* Touch on the map area: drag spins the map; a double-tap
+			 * recenters yaw to ship-up. Only acts inside the minimap
+			 * rectangle so it never steals the edge buttons' touches. */
+			static void mini_handle_touch(void)
+			{
+				touchPosition t;
+				static int last_tap_frame = -1;
+				static int in_box = 0;
+				int frame = (int)(timer_query() >> 16);  /* ~seconds */
+				if (hidKeysHeld() & KEY_TOUCH) {
+					hidTouchRead(&t);
+					if (t.px >= MINI_X && t.px < MINI_X + MINI_W &&
+					    t.py >= MINI_Y && t.py < MINI_Y + MINI_H) {
+						if (!in_box) {
+							/* touch-down transition: detect double-tap */
+							if (last_tap_frame >= 0 && (frame - last_tap_frame) <= 1)
+								g_mini_yaw = 0;  /* recenter */
+							last_tap_frame = frame;
+							g_mini_dragging = 1;
+							g_mini_last_tx = t.px;
+							in_box = 1;
+						} else {
+							int dx = t.px - g_mini_last_tx;
+							g_mini_yaw += (double)dx * 0.01;  /* drag sensitivity */
+							g_mini_last_tx = t.px;
+						}
+					}
+				} else {
+					g_mini_dragging = 0;
+					in_box = 0;
+				}
+			}
+
+			/* Draw one segment as 6 faces. Internal walls shared with an already
+			 * visited neighbor are hidden, so explored space reads as room
+			 * outlines instead of a stack of cubes. Doors are drawn in gold. */
+			static void mini_draw_segment(segment *seg)
+			{
+				int s, k;
+				for (s = 0; s < 6; s++) {
+					int n = seg->children[s];
+					int wn = seg->sides[s].wall_num;
+					int is_door = (wn >= 0 && Walls[wn].type == WALL_DOOR);
+					/* hide internal wall between two visited segments */
+					if (n >= 0 && Automap_visited[n] && !is_door)
+						continue;
+					{
+						uint16_t col = is_door ? 0xFFE0 : 0x07FF;  /* gold door / cyan wall */
+						const sbyte *fv = Side_to_verts[s];
+						vms_vector p[4];
+						int ok = 1;
+						for (k = 0; k < 4; k++)
+							if (!mini_project(&Vertices[seg->verts[(int)fv[k]]], &p[k]))
+								{ ok = 0; break; }
+						if (!ok) continue;
+						for (k = 0; k < 4; k++) {
+							int a = k, b = (k + 1) & 3;
+							bottom_draw_line((int)p[a].x, (int)p[a].y,
+									(int)p[b].x, (int)p[b].y, col,
+									MINI_X, MINI_Y, MINI_W, MINI_H);
+						}
+					}
+				}
+			}
+
+			/* Draw a small blip (3x3 cross) + a 1-char label for a world
+			 * point, clipped to box. label may be 0/NUL for no label. */
+			static void mini_blip(const vms_vector *pos, uint16_t col, char label)
+			{
+				vms_vector p;
+				if (!mini_project(pos, &p)) return;
+				if (p.x < MINI_X || p.x >= MINI_X + MINI_W ||
+				    p.y < MINI_Y || p.y >= MINI_Y + MINI_H) return;
+				bottom_draw_line((int)p.x-1, (int)p.y, (int)p.x+1, (int)p.y, col, MINI_X, MINI_Y, MINI_W, MINI_H);
+				bottom_draw_line((int)p.x, (int)p.y-1, (int)p.x, (int)p.y+1, col, MINI_X, MINI_Y, MINI_W, MINI_H);
+				if (label) {
+					/* Only label blips comfortably inside the box, and clamp
+					 * the text origin so the whole glyph stays inside the
+					 * cleared rectangle (bottom_print does not clip, so an
+					 * unclamped label would spill and accumulate). */
+					if (p.x >= MINI_X + 6 && p.x < MINI_X + MINI_W - 6 &&
+					    p.y >= MINI_Y + 8 && p.y < MINI_Y + MINI_H - 4) {
+						int lx = (int)p.x + 2, ly = (int)p.y - 5;
+						if (lx < MINI_X + 2) lx = MINI_X + 2;
+						if (lx > MINI_X + MINI_W - 8) lx = MINI_X + MINI_W - 8;
+						if (ly < MINI_Y + 8) ly = MINI_Y + 8;
+						if (ly > MINI_Y + MINI_H - 2) ly = MINI_Y + MINI_H - 2;
+						{
+							char s[2] = { label, 0 };
+							bottom_print(lx, ly, s, col);
+						}
+					}
+				}
+			}
+
+			void automap_minimap_tick(void)
+			{
+				int segnum, i;
+				fix64 now;
+				if (Player_num < 0 || Player_num >= N_players) return;
+				if (Automap_active) return;	/* full-screen automap owns the view */
+				mini_handle_touch();
+				now = timer_query();
+				if (now - g_minimap_last < F1_0 / 30) return;	/* ~30 Hz */
+				g_minimap_last = now;
+
+				bottom_clear_rect(MINI_X, MINI_Y, MINI_W, MINI_H);
+
+				/* segments within local radius, drawn as room outlines */
+				for (segnum = 0; segnum <= Highest_segment_index; segnum++) {
+					segment *seg;
+					if (!Automap_visited[segnum]) continue;
+					seg = &Segments[segnum];
+					if (vm_vec_dist(&Vertices[seg->verts[0]], &ConsoleObject->pos) > i2f(MINI_RANGE_UNITS))
+						continue;
+					mini_draw_segment(seg);
+				}
+
+				/* object blips */
+				for (i = 0; i <= Highest_object_index; i++) {
+					object *objp = &Objects[i];
+					switch (objp->type) {
+					case OBJ_HOSTAGE:
+						mini_blip(&objp->pos, 0xF81F, 'H'); break;   /* pink, H */
+					case OBJ_POWERUP:
+						if (objp->id == POW_KEY_RED) mini_blip(&objp->pos, 0xF800, 'K');
+						else if (objp->id == POW_KEY_BLUE) mini_blip(&objp->pos, 0x001F, 'K');
+						else if (objp->id == POW_KEY_GOLD) mini_blip(&objp->pos, 0xFFE0, 'K');
+						else mini_blip(&objp->pos, 0x07E0, 'P');     /* green, P */
+						break;
+					case OBJ_ROBOT:
+						mini_blip(&objp->pos, 0xF800, 'R'); break;    /* red, R */
+					case OBJ_PLAYER:
+						if (i != Players[Player_num].objnum)
+							mini_blip(&objp->pos, 0xFFFF, 'Y');        /* white, Y = other player */
+						break;
+					default: break;
+					}
+				}
+
+				/* heading tick: short line from center along player's facing
+				 * (forward = orient.fvec), rotated by the current yaw. */
+				{
+					vms_vector ahead, hp;
+					ahead.x = ConsoleObject->pos.x + ConsoleObject->orient.fvec.x * 60;
+					ahead.y = ConsoleObject->pos.y + ConsoleObject->orient.fvec.y * 60;
+					ahead.z = ConsoleObject->pos.z + ConsoleObject->orient.fvec.z * 60;
+					if (mini_project(&ahead, &hp)) {
+						bottom_draw_line(MINI_CX, MINI_CY, (int)hp.x, (int)hp.y, 0xFFE0,
+								MINI_X, MINI_Y, MINI_W, MINI_H);
+					}
+				}
+
+				/* player marker at center (clipped to box) */
+				bottom_draw_line(MINI_CX-3, MINI_CY, MINI_CX+3, MINI_CY, 0xFFFF,
+						MINI_X, MINI_Y, MINI_W, MINI_H);
+				bottom_draw_line(MINI_CX, MINI_CY-3, MINI_CX, MINI_CY+3, 0xFFFF,
+						MINI_X, MINI_Y, MINI_W, MINI_H);
+			}
+			#endif

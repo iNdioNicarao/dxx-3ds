@@ -26,5 +26,8 @@ extern int Automap_active;
 extern void do_automap(int key_code);
 extern void automap_clear_visited();
 extern ubyte Automap_visited[MAX_SEGMENTS];
+#ifdef __3DS__
+extern void automap_minimap_tick(void);	/* always-on bottom-screen minimap */
+#endif
 
 #endif

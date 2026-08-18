@@ -1167,6 +1167,7 @@ int game_handler(window *wind, d_event *event, void *data)
 				write_player_file();
 				return 1;
 			}
+				automap_minimap_tick();	/* always-on bottom-screen minimap (3DS) */
 				bottom_screen_present();
 		}
 #endif

@@ -16,6 +16,7 @@
 #define _BOTTOM_SCREEN_H_
 
 #include <3ds.h>
+#include "gr.h"		/* grs_bitmap — used by bottom_blit_canvas_region() */
 
 /* Logical bottom-screen dimensions (landscape): the OSK/layout space.
  * The raw framebuffer is 240x320 (portrait); bottom_set_px rotates it.
@@ -105,6 +106,20 @@ int bottom_hud_tapped(void);
 void bottom_hud_reset(void);
 /* Stereo separation is set by the 3DS hardware depth slider (PARALLEL only);
  * the on-screen +/- buttons were removed. */
+
+/* Always-on automap minimap (3DS): composite the 6DOF automap canvas into a
+ * bottom-screen region. dx,dy,dw,dh are logical bottom-screen coords. */
+void bottom_blit_canvas_region(grs_bitmap *src, int dx, int dy, int dw, int dh);
+/* Clear a logical bottom-screen rectangle (e.g. the minimap area) to black. */
+void bottom_clear_rect(int x, int y, int w, int h);
+/* Bresenham line into the bottom buffer (logical coords). Software minimap
+ * renderer uses this because GL cannot target the libctru bottom framebuffer.
+ * Every pixel is clipped to (cx,cy,cw,ch) so the map cannot spill. */
+void bottom_draw_line(int x0, int y0, int x1, int y1, uint16_t c,
+			int cx, int cy, int cw, int ch);
+/* Rectangle outline (logical coords), clipped to (cx,cy,cw,ch). */
+void bottom_draw_rect(int x, int y, int w, int h, uint16_t c,
+			int cx, int cy, int cw, int ch);
 
 /* Draw a string using the real Descent game font (GAME_FONT) into the bottom
  * buffer (3DS only). Falls back to nothing if the font isn't loaded yet.

@@ -252,6 +252,91 @@ void bottom_fill_rect(int x, int y, int w, int h, uint16_t rgb565)
 			bottom_set_px(ix, iy, rgb565);
 }
 
+/* --- Always-on automap minimap (3DS): composite a grs_bitmap (the 3D
+ * automap canvas) into a dw x dh region at logical (dx,dy), scaled
+ * nearest-neighbour, honouring the bottom-screen 90deg-CW rotation used
+ * everywhere else here. The source is the 6DOF automap render, so this is a
+ * correct (not top-down) minimap. Caller clears the region first if needed.
+ * The automap canvas may be 16-bit (RGB565) or 32-bit (RGBA) depending on the
+ * GL backend; bytes-per-pixel is derived from bm_rowsize so both work. --- */
+void bottom_blit_canvas_region(grs_bitmap *src, int dx, int dy, int dw, int dh)
+{
+	int ix, iy;
+	int sw, sh, bpp;
+	uint8_t *sptr;
+	if (!g_bot_buf || !src || !src->bm_data) return;
+	sw = src->bm_w;
+	sh = src->bm_h;
+	if (sw <= 0 || sh <= 0 || dw <= 0 || dh <= 0) return;
+	bpp = src->bm_rowsize / sw;		/* 2 = RGB565, 4 = RGBA */
+	if (bpp != 2 && bpp != 4) return;
+	sptr = (uint8_t *)src->bm_data;
+	for (iy = 0; iy < dh; iy++) {
+		int sy = (iy * sh) / dh;
+		if (sy < 0) sy = 0;
+		if (sy >= sh) sy = sh - 1;
+		for (ix = 0; ix < dw; ix++) {
+			int sx = (ix * sw) / dw;
+			uint16_t px;
+			if (sx < 0) sx = 0;
+			if (sx >= sw) sx = sw - 1;
+			if (bpp == 2) {
+				px = *(uint16_t *)(sptr + sy * src->bm_rowsize + sx * 2);
+			} else {
+				uint8_t *p = sptr + sy * src->bm_rowsize + sx * 4;
+				uint8_t r = p[0] >> 3, g = p[1] >> 2, b = p[2] >> 3;
+				px = (r << 11) | (g << 5) | b;	/* RGBA -> RGB565 */
+			}
+			bottom_set_px(dx + ix, dy + iy, px);
+		}
+	}
+	g_bottom_dirty = 1;
+}
+
+/* Clear the center safe-area rectangle (where the minimap lives) so the map
+ * never bleeds into the button rows. Logical coords. */
+void bottom_clear_rect(int x, int y, int w, int h)
+{
+	bottom_fill_rect(x, y, w, h, 0x0000);  /* black */
+}
+
+/* Bresenham line into the bottom buffer, logical coords (rotated like the
+ * rest of this file). Clips every plotted pixel to the rectangle
+ * (cx,cy,cw,ch) so the software minimap cannot spill onto the buttons.
+ * Used by the software automap minimap, which cannot use GL (the bottom
+ * screen is libctru-managed, not picaGL). */
+void bottom_draw_line(int x0, int y0, int x1, int y1, uint16_t c,
+			int cx, int cy, int cw, int ch)
+{
+	int dx, dy, sx, sy, err, e2;
+	if (!g_bot_buf) return;
+	dx = (x1 >= x0) ? (x1 - x0) : (x0 - x1);
+	dy = (y1 >= y0) ? (y1 - y0) : (y0 - y1);
+	sx = (x0 < x1) ? 1 : -1;
+	sy = (y0 < y1) ? 1 : -1;
+	err = dx - dy;
+	for (;;) {
+		if (x0 >= cx && x0 < cx + cw && y0 >= cy && y0 < cy + ch)
+			bottom_set_px(x0, y0, c);
+		if (x0 == x1 && y0 == y1) break;
+		e2 = 2 * err;
+		if (e2 > -dy) { err -= dy; x0 += sx; }
+		if (e2 <  dx) { err += dx; y0 += sy; }
+	}
+	g_bottom_dirty = 1;
+}
+
+/* Rectangle outline into the bottom buffer (logical coords), clipped to
+ * (cx,cy,cw,ch). Used for the minimap REC button etc. */
+void bottom_draw_rect(int x, int y, int w, int h, uint16_t c,
+			int cx, int cy, int cw, int ch)
+{
+	bottom_draw_line(x, y, x + w, y, c, cx, cy, cw, ch);
+	bottom_draw_line(x + w, y, x + w, y + h, c, cx, cy, cw, ch);
+	bottom_draw_line(x + w, y + h, x, y + h, c, cx, cy, cw, ch);
+	bottom_draw_line(x, y + h, x, y, c, cx, cy, cw, ch);
+}
+
 void bottom_print(int x, int y, const char *s, uint16_t rgb565)
 {
 	int cx = x;
