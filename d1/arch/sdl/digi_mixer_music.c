@@ -122,7 +122,11 @@ int mix_play_file(char *filename, int loop, void (*hook_finished_track)())
         
         if (fptr && !d_stricmp(fptr, ".hmp")) 
         {
+            /* 3DS SDL_mixer has no MIDI/HMP decoder; try a user-supplied
+             * converted track in wav/ then mp3/ (either works). */
             snprintf(new_path_buffer, NEW_PATH_BUFSIZE, "wav/%s.wav", basename);
+            if (mix_play_file(new_path_buffer, loop, hook_finished_track)) return 1;
+            snprintf(new_path_buffer, NEW_PATH_BUFSIZE, "mp3/%s.mp3", basename);
             return mix_play_file(new_path_buffer, loop, hook_finished_track);
         }
         else if (fptr && !d_stricmp(fptr, ".wav")) 

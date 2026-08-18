@@ -107,14 +107,29 @@ Then pick **one** install method:
 
 ## Music
 
-The 3DS can't play the game's HMP→MIDI music directly.
+The 3DS SDL_mixer port has **no HMP/MIDI decoder**, so the stock tracks
+inside `descent.hog` cannot be played directly. To get in-game music you
+must supply converted audio files (one-time setup):
 
-- On first run, MIDI files are copied to `/3ds/D1/midi/`.
-- Convert them to WAV (e.g. TiMidity + FluidR3 soundfont) and drop the
-  results in `/3ds/D1/wav/`.
-- The game also plays MP3s from `/3ds/D1/mp3/` (e.g. the GOG release
-  ships MP3s) — filenames must match the MIDI song names.
-- Playback priority: `wav` → `mp3` → (then MIDI if a player is present).
+1. **Get a music pack.** The upstream DXX-Rebirth project ships/supports
+   community **OGG music AddOn packs** for Descent 1 & 2 (following the
+   DOS song-naming rules). See the DXX-Rebirth site and its GitHub
+   \u201cMusic Packs\u201d discussion for the current pack links.
+2. **Or convert the game's own tracks.** The HMP tracks are already inside
+   `descent.hog`. Render them with **TiMidity++** + a soundfont, then
+   encode to MP3/OGG. Example (per track):
+   ```
+   timidity game01.hmp -Ow -o - | ffmpeg -i - -b:a 192k game01.mp3
+   ```
+3. **Install.** Drop the files in `/3ds/D1/mp3/` (or `/3ds/D1/ogg/`,
+   `/3ds/D1/wav/`), named `game01.mp3`, `game02.mp3`, … matching the
+   level songs. The 3DS fallback tries `wav/` first, then `mp3/`.
+
+The `midi/` folder written by some older builds is **not used** for
+playback (SDL_mixer can't decode it) — it can be deleted.
+For custom music, list your own tracks in a `dxx.sng` song file in any
+SDL_mixer-supported format (`.mp3`, `.ogg`, `.flac`); filenames must match
+the song names in the list.
 
 ---
 
