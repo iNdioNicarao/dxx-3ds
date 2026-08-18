@@ -32,7 +32,7 @@ APP_DESCRIPTION := Port of DXX-Rebirth to 3DS
 APP_AUTHOR		:= El iNdioNicarao
 VER_MAJOR	:=	2
 VER_MINOR	:=	0
-VER_MICRO			:=	8
+VER_MICRO			:=	9
 APP_VERSION	:=	$(VER_MAJOR).$(VER_MINOR).$(VER_MICRO)
 
 
