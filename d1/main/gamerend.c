@@ -689,10 +689,11 @@ void game_render_frame_mono(int flip)
 			// eye separation in WORLD units (not percent): presets
 			// {1,2,3,4,5,6} are world-unit magnitudes. A /100 percent
 			// scale made them ~0.2 units -> sub-pixel, invisible 3D.
-			// Scale by 0.35 so pct=6 ~= 2.1 units (gentle max) and
-			// pct=1 ~= 0.35 units (very subtle floor). Slider 0..1
+			// Scale by 0.12 so pct=6 ~= 0.72 units (gentle max) and
+			// pct=1 ~= 0.12 units (very subtle floor). Slider 0..1
 			// scales depth continuously on top of the preset.
-			eye = (fix)(F1_0 * (g_stereo_sep_pct * 0.35f) * slider);
+			eye = (fix)(F1_0 * (g_stereo_sep_pct * 0.12f) * slider);
+			if (eye > F1_0 * 1.5) eye = F1_0 * 1.5;	/* hard cap: never nauseating */
 			// LEFT eye (+offset) -> GFX_LEFT, then cockpit+HUD, then present
 			pglSelectScreen(0/*GFX_TOP*/, 0/*GFX_LEFT*/);
 			render_frame(eye);
