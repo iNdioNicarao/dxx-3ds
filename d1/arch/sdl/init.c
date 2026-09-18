@@ -21,6 +21,15 @@
  * flushes bail instead of touching hardware the OS is reclaiming. */
 static aptHookCookie d1x_apt_cookie;
 volatile int d1x_powering_off = 0;
+static int pending_sleep_pause = 0;
+
+int get_pending_sleep_pause(void)
+{
+	int p = pending_sleep_pause;
+	pending_sleep_pause = 0;
+	return p;
+}
+
 /* 3DS APT hook: track suspend/power-off state.
  *
  * ONSUSPEND fires for power button, sleep, AND system applets (swkbd,
@@ -38,8 +47,10 @@ static void d1x_apt_hook(APT_HookType type, void *param)
 {
 	if (type == APTHOOK_ONSUSPEND || type == APTHOOK_ONEXIT) {
 		d1x_powering_off = 1;
+		songs_pause();
 	} else if (type == APTHOOK_ONRESTORE || type == APTHOOK_ONWAKEUP) {
 		d1x_powering_off = 0;
+		pending_sleep_pause = 1;
 		/* 3DS: sleep/wake (lid close/open) loses GPU/display state. If the 3D
 		 * slider was up at sleep, stereo_hw_on is stale == 1, so the next live
 		 * frame skips re-issuing gfxSet3D/pglSetStereo and both screens stay

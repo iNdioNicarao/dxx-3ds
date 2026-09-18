@@ -73,6 +73,8 @@ fix event_get_idle_seconds();
 void get_touch(touchPosition *out);
 /* 1 on the frame the stylus first touches down, else 0. */
 int touch_tapped(void);
+extern volatile int d1x_powering_off;
+void bottom_screen_present(void);
 #endif
 
 #endif /* _EVENT_H */

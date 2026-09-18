@@ -183,9 +183,12 @@ bool g3_draw_polygon_model(void *model_ptr,grs_bitmap **model_bitmaps,vms_angvec
 				Assert( nv < MAX_POINTS_PER_POLY );
 				if (g3_check_normal_facing(vp(p+4),vp(p+16)) > 0) {
 					int i;
-					g3s_lrgb light, *lrgb_list;
-
-					MALLOC(lrgb_list, g3s_lrgb, nv);
+					g3s_lrgb light;
+					// 3DS Performance: use stack buffer instead of MALLOC/d_free.
+					// nv < MAX_POINTS_PER_POLY (25), so 300 bytes on stack.
+					// Eliminates 150+ heap alloc/free pairs per frame during robot rendering.
+					g3s_lrgb lrgb_list_stack[MAX_POINTS_PER_POLY];
+					g3s_lrgb *lrgb_list = lrgb_list_stack;
 					//calculate light from surface normal
 					if (glow_num < 0) //no glow
 					{
@@ -218,7 +221,7 @@ bool g3_draw_polygon_model(void *model_ptr,grs_bitmap **model_bitmaps,vms_angvec
 						point_list[i] = Interp_point_list + wp(p+30)[i];
 
 					g3_draw_tmap(nv,point_list,uvl_list,lrgb_list,model_bitmaps[w(p+28)]);
-					d_free(lrgb_list);
+				/* lrgb_list is stack-allocated, no d_free needed */
 				}
 
 				p += 30 + ((nv&~1)+1)*2 + nv*12;
@@ -352,14 +355,15 @@ bool g3_draw_morphing_model(void *model_ptr,grs_bitmap **model_bitmaps,vms_angve
 				break;
 			}
 
-			case OP_TMAPPOLY: {
+				case OP_TMAPPOLY: {
 				int nv = w(p+2);
 				g3s_uvl *uvl_list;
-				g3s_lrgb light, *lrgb_list;
+				g3s_lrgb light;
+				// 3DS Performance: stack-allocate (same as above in non-morphing path)
+				g3s_lrgb lrgb_list_stack[MAX_POINTS_PER_POLY];
+				g3s_lrgb *lrgb_list = lrgb_list_stack;
 				g3s_uvl morph_uvls[3];
 				int i,ntris;
-
-				MALLOC(lrgb_list, g3s_lrgb, nv);
 
 				//calculate light from surface normal
 				if (glow_num < 0) //no glow
@@ -414,7 +418,7 @@ bool g3_draw_morphing_model(void *model_ptr,grs_bitmap **model_bitmaps,vms_angve
 				}
 
 				p += 30 + ((nv&~1)+1)*2 + nv*12;
-				d_free(lrgb_list);
+				/* lrgb_list is stack-allocated, no d_free needed */
 
 				break;
 			}

@@ -45,6 +45,9 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "gauges.h"
 #include "powerup.h"
 #include "fuelcen.h"
+#ifdef USE_SDLMIXER
+#include "digi_mixer.h"
+#endif
 
 void paging_touch_vclip( vclip * vc )
 {
@@ -321,6 +324,10 @@ void paging_touch_all()
 		paging_touch_weapon(s);
 	}
 
+	for ( s=0; s<N_robot_types; s++ )	{
+		paging_touch_robot(s);
+	}
+
 	for ( s=0; s < N_powerup_types; s++ )	{
 		if ( Powerup_info[s].vclip_num > -1 )	
 			paging_touch_vclip(&Vclip[Powerup_info[s].vclip_num]);
@@ -334,6 +341,10 @@ void paging_touch_all()
 	}
 	paging_touch_vclip( &Vclip[VCLIP_PLAYER_APPEARANCE] );
 	paging_touch_vclip( &Vclip[VCLIP_POWERUP_DISAPPEARANCE] );
+
+#ifdef USE_SDLMIXER
+	mixdigi_preconvert_all();
+#endif
 
 	start_time();
 	reset_cockpit();		//force cockpit redraw next time

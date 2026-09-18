@@ -51,6 +51,7 @@ typedef struct {
 	char	mission_name[MISSION_NAME_LEN+1];
 	ubyte   anarchy_only_flag;  // if true, mission is only for anarchy
 	char	*path;				// relative file path
+	int	location;			// where the mission is (ML_CURDIR or ML_MISSIONDIR)
 	d_fname	briefing_text_filename; // name of briefing file
 	d_fname	ending_text_filename; // name of ending file
 	ubyte	last_level;

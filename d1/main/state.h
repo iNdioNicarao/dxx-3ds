@@ -26,6 +26,9 @@ int state_save_all(int blind_save);
 int state_quick_save(void);
 int state_quick_load(void);
 int state_restore_all(int in_game );
+#ifdef __3DS__
+void state_capture_gameplay_thumbnail(void);
+#endif
 
 extern int state_save_old_game(int slotnum, char * sg_name, player_rw * sg_player, 
                         int sg_difficulty_level, int sg_primary_weapon, 

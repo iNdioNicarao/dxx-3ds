@@ -361,12 +361,19 @@ int songs_play_song( int songnum, int repeat )
 #ifdef USE_SDLMIXER
 		case MUSIC_TYPE_CUSTOM:
 		{
-			// EXCEPTION: If SONG_ENDLEVEL is undefined, continue playing level song.
-			if (Song_playing >= SONG_FIRST_LEVEL_SONG && songnum == SONG_ENDLEVEL && !strlen(GameCfg.CMMiscMusic[songnum]))
+			int trk = -1;
+
+			if (jukebox_is_active())
 				return Song_playing;
 
 			Song_playing = -1;
-			if (songs_play_file(GameCfg.CMMiscMusic[songnum], repeat, NULL))
+			if (songnum == SONG_TITLE) trk = 0;
+			else if (songnum == SONG_BRIEFING) trk = 1;
+			else if (songnum == SONG_ENDLEVEL) trk = 24;
+			else if (songnum == SONG_ENDGAME) trk = 25;
+			else if (songnum == SONG_CREDITS) trk = 26;
+
+			if (trk >= 0 && jukebox_play_game_track(trk, repeat))
 				Song_playing = songnum;
 			break;
 		}
@@ -452,36 +459,31 @@ int songs_play_level_song( int levelnum, int offset )
 #ifdef USE_SDLMIXER
 		case MUSIC_TYPE_CUSTOM:
 		{
-			if (GameCfg.CMLevelMusicPlayOrder == MUSIC_CM_PLAYORDER_RAND)
-				GameCfg.CMLevelMusicTrack[0] = d_rand() % GameCfg.CMLevelMusicTrack[1]; // simply a random selection - no check if this song has already been played. But that's how I roll!
-			else if (!offset)
+			int trk;
+
+			if (jukebox_is_active())
 			{
-				if (GameCfg.CMLevelMusicPlayOrder == MUSIC_CM_PLAYORDER_CONT)
+				if (offset != 0)
 				{
-					static int last_songnum = -1;
-
-					if (Song_playing >= SONG_FIRST_LEVEL_SONG)
-						return Song_playing;
-
-					// As soon as we start a new level, go to next track
-					if (last_songnum != -1 && songnum != last_songnum)
-						((GameCfg.CMLevelMusicTrack[0]+1>=GameCfg.CMLevelMusicTrack[1])?GameCfg.CMLevelMusicTrack[0]=0:GameCfg.CMLevelMusicTrack[0]++);
-					last_songnum = songnum;
+					if (offset > 0) jukebox_next();
+					else jukebox_prev();
 				}
-				else if (GameCfg.CMLevelMusicPlayOrder == MUSIC_CM_PLAYORDER_LEVEL)
-					GameCfg.CMLevelMusicTrack[0] = (songnum % GameCfg.CMLevelMusicTrack[1]);
+				Song_playing = songnum + SONG_FIRST_LEVEL_SONG;
+				return Song_playing;
 			}
-			else
+
+			if (!offset)
 			{
-				GameCfg.CMLevelMusicTrack[0] += offset;
-				if (GameCfg.CMLevelMusicTrack[0] < 0)
-					GameCfg.CMLevelMusicTrack[0] = GameCfg.CMLevelMusicTrack[1] + GameCfg.CMLevelMusicTrack[0];
-				if (GameCfg.CMLevelMusicTrack[0] + 1 > GameCfg.CMLevelMusicTrack[1])
-					GameCfg.CMLevelMusicTrack[0] = GameCfg.CMLevelMusicTrack[0] - GameCfg.CMLevelMusicTrack[1];
+				if (Song_playing >= SONG_FIRST_LEVEL_SONG && songnum + SONG_FIRST_LEVEL_SONG == Song_playing)
+					return Song_playing;
 			}
+
+			// Map level number to Roland SC-55 catalog track: game01..game22 (catalog indices 2..23)
+			trk = 2 + ((songnum + offset) % 22);
+			if (trk < 2) trk += 22;
 
 			Song_playing = -1;
-			if (jukebox_play())
+			if (jukebox_play_game_track(trk, 1))
 				Song_playing = songnum + SONG_FIRST_LEVEL_SONG;
 
 			break;

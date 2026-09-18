@@ -88,6 +88,8 @@ void apply_light(g3s_lrgb obj_light_emission, int obj_seg, vms_vector *obj_pos, 
 			int	headlight_shift = 0;
 			fix	max_headlight_dist = F1_0*200;
 
+			fix max_light_dist = abs(obji_64) << headlight_shift;
+
 			for (vv=0; vv<n_render_vertices; vv++) {
 				int			vertnum, vsegnum;
 				vms_vector	*vertpos;
@@ -97,6 +99,15 @@ void apply_light(g3s_lrgb obj_light_emission, int obj_seg, vms_vector *obj_pos, 
 				vertnum = render_vertices[vv];
 				vsegnum = vert_segnum_list[vv];
 				vertpos = &Vertices[vertnum];
+
+#if defined(__3DS__)
+				// 3DS Performance Optimization:
+				// Fast bounding-box pre-cull. Discards vertices outside the light sphere
+				// in ~3 cycles before performing expensive 3D vector distance & square root.
+				if (abs(vertpos->x - obj_pos->x) >= max_light_dist) continue;
+				if (abs(vertpos->y - obj_pos->y) >= max_light_dist) continue;
+				if (abs(vertpos->z - obj_pos->z) >= max_light_dist) continue;
+#endif
 
 				if (use_fcd_lighting && abs(obji_64) > F1_0*32)
 				{
@@ -181,7 +192,7 @@ void cast_muzzle_flash_light(int n_render_vertices, int *render_vertices, int *v
 			if (time_since_flash < FLASH_LEN_FIXED_SECONDS)
 			{
 				g3s_lrgb ml;
-				ml.r = ml.g = ml.b = ((FLASH_LEN_FIXED_SECONDS - time_since_flash) * FLASH_SCALE);
+				ml.r = ml.g = ml.b = (((FLASH_LEN_FIXED_SECONDS - time_since_flash) * FLASH_SCALE * 11) / 10);
 				apply_light(ml, Muzzle_data[i].segnum, &Muzzle_data[i].pos, n_render_vertices, render_vertices, vert_segnum_list, -1);
 			}
 			else
@@ -260,6 +271,9 @@ g3s_lrgb compute_light_emission(int objnum)
 			light_intensity = 0;
 			break;
 	}
+
+	// 10% brighter light emission across all light sources (flares, lasers, fireballs, headlights)
+	light_intensity = (light_intensity * 11) / 10;
 
 	lemission.r = lemission.g = lemission.b = light_intensity;
 
@@ -442,16 +456,52 @@ void set_dynamic_light(void)
 
 	cast_muzzle_flash_light(n_render_vertices, render_vertices, vert_segnum_list);
 
+#if defined(__3DS__)
+	// 3DS Performance Optimization:
+	// Compute the 3D bounding box of all rendered vertices once per frame.
+	// Any light source whose maximum emission radius does not intersect this AABB
+	// is rejected in ~6 integer checks, avoiding hundreds of vertex distance loops
+	// in apply_light() for off-screen / distant objects.
+	vms_vector rend_min = { 0x7fffffff, 0x7fffffff, 0x7fffffff };
+	vms_vector rend_max = { -0x7fffffff, -0x7fffffff, -0x7fffffff };
+	for (vv=0; vv<n_render_vertices; vv++) {
+		vms_vector *vp = &Vertices[render_vertices[vv]];
+		if (vp->x < rend_min.x) rend_min.x = vp->x;
+		if (vp->x > rend_max.x) rend_max.x = vp->x;
+		if (vp->y < rend_min.y) rend_min.y = vp->y;
+		if (vp->y > rend_max.y) rend_max.y = vp->y;
+		if (vp->z < rend_min.z) rend_min.z = vp->z;
+		if (vp->z > rend_max.z) rend_max.z = vp->z;
+	}
+#endif
+
 	for (objnum=0; objnum<=Highest_object_index; objnum++)
 	{
 		object		*obj = &Objects[objnum];
 		vms_vector	*objpos = &obj->pos;
 		g3s_lrgb	obj_light_emission;
 
-		obj_light_emission = compute_light_emission(objnum);
+		if (obj->type == OBJ_NONE)
+			continue;
 
-		if (((obj_light_emission.r+obj_light_emission.g+obj_light_emission.b)/3) > 0)
-			apply_light(obj_light_emission, obj->segnum, objpos, n_render_vertices, render_vertices, vert_segnum_list, objnum);
+		obj_light_emission = compute_light_emission(objnum);
+		fix obj_radius = (obj_light_emission.r + obj_light_emission.g + obj_light_emission.b) / 3;
+
+		if (obj_radius <= 0)
+			continue;
+
+#if defined(__3DS__)
+		// If object's maximum light reach does not overlap the visible geometry AABB, skip:
+		if (objnum != Players[Player_num].objnum)
+		{
+			if (objpos->x + obj_radius < rend_min.x || objpos->x - obj_radius > rend_max.x ||
+			    objpos->y + obj_radius < rend_min.y || objpos->y - obj_radius > rend_max.y ||
+			    objpos->z + obj_radius < rend_min.z || objpos->z - obj_radius > rend_max.z)
+				continue;
+		}
+#endif
+
+		apply_light(obj_light_emission, obj->segnum, objpos, n_render_vertices, render_vertices, vert_segnum_list, objnum);
 	}
 }
 
@@ -624,6 +674,14 @@ g3s_lrgb compute_object_light(object *obj,vms_vector *rotated_pnt)
 	light.r += seg_dl.r;
 	light.g += seg_dl.g;
 	light.b += seg_dl.b;
+
+	// 10% brighter object lighting
+	light.r = (light.r * 11) / 10;
+	light.g = (light.g * 11) / 10;
+	light.b = (light.b * 11) / 10;
+	if (light.r > MAX_LIGHT) light.r = MAX_LIGHT;
+	if (light.g > MAX_LIGHT) light.g = MAX_LIGHT;
+	if (light.b > MAX_LIGHT) light.b = MAX_LIGHT;
 
 	return light;
 }

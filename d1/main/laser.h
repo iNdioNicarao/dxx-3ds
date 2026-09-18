@@ -71,6 +71,7 @@ void Laser_player_fire_spread(struct object *obj, int laser_type, int gun_num, f
 void Laser_do_weapon_sequence(struct object *obj, int doHomerFrame, fix idealHomerFrameTime, unsigned int homerFrameCount );
 void Flare_create(struct object *obj);
 int laser_are_related(int o1, int o2);
+void laser_do_crosshair(struct object *obj);
 
 extern void do_laser_firing_player(void);
 extern void do_missile_firing(int drop_bomb);

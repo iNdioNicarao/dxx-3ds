@@ -78,6 +78,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "config.h"
 #include "mouse.h"
 #include "bottom_screen.h" /* 3DS bottom-screen UI (in-game MENU button) */
+#include "tactical_bottom.h" /* 3DS tactical radar & rear-view mirror */
 #include "switch.h"
 #include "controls.h"
 #include "songs.h"
@@ -1073,6 +1074,9 @@ int game_handler(window *wind, d_event *event, void *data)
 			break;
 
 		case EVENT_WINDOW_DEACTIVATED:
+#ifdef __3DS__
+			state_capture_gameplay_thumbnail();
+#endif
 			if (!(((Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)) && (!Endlevel_sequence)) )
 				stop_time();
 
@@ -1125,6 +1129,9 @@ int game_handler(window *wind, d_event *event, void *data)
 				bottom_save_reset();
 				bottom_rec_reset();
 				bottom_hud_reset();
+				bottom_gyro_reset();
+				bottom_pri_reset();
+				bottom_sec_reset();
 				bottom_clear(0);
 				bs_was_playback = 1;
 			}
@@ -1141,6 +1148,10 @@ int game_handler(window *wind, d_event *event, void *data)
 			bottom_menu_reset();
 			bottom_save_reset();
 			bottom_rec_reset();
+			bottom_hud_reset();
+			bottom_gyro_reset();
+			bottom_pri_reset();
+			bottom_sec_reset();
 			bottom_clear(0);
 			return 1;
 		}
@@ -1167,8 +1178,31 @@ int game_handler(window *wind, d_event *event, void *data)
 				write_player_file();
 				return 1;
 			}
-				automap_minimap_tick();	/* always-on bottom-screen minimap (3DS) */
-				bottom_screen_present();
+			/* Top-row GYRO toggle button (directly next to HUD). */
+			extern int g_gyro_enabled;
+			if (bottom_gyro_tapped(g_gyro_enabled)) {
+				g_gyro_enabled = !g_gyro_enabled;
+				if (g_gyro_enabled) {
+					extern void gyro_reset_calibration(void);
+					gyro_reset_calibration();
+					HIDUSER_EnableGyroscope();
+				} else {
+					HIDUSER_DisableGyroscope();
+				}
+				HUD_init_message(HM_DEFAULT, "Gyro Aim: %s", g_gyro_enabled ? "ON" : "OFF");
+				return 1;
+			}
+			/* Tactical buttons on bottom screen: weapon cycle & minimap zoom */
+			if (bottom_pri_tapped()) {
+				extern void CyclePrimary(void);
+				CyclePrimary();
+				return 1;
+			}
+			if (bottom_sec_tapped()) {
+				extern void CycleSecondary(void);
+				CycleSecondary();
+				return 1;
+			}
 		}
 #endif
 			return ReadControls(event);
@@ -1291,6 +1325,9 @@ void game_leave_menus(void)
 	ogl_invalidate_textures(); /* force re-upload: picaGL texture state does not survive applets/menus */
 	stereo_resume();  /* let the per-frame slider logic re-engage stereo if the 3D slider is still up */
 	bottom_hud_reset(); /* re-arm the top-row HUD button so it redraws after a menu/resume cycle */
+	bottom_gyro_reset(); /* re-arm the top-row GYRO button so it redraws after a menu/resume cycle */
+	bottom_pri_reset();
+	bottom_sec_reset();
 #endif
 
 	while ((wind = window_get_front()) && (wind != Game_wind)) // go through all windows and actually close them if they want to

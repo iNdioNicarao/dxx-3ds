@@ -720,12 +720,6 @@ void StartNewGame(int start_level)
 	Players[Player_num].starting_level = start_level;		// Mark where they started
 
 	game_disable_cheats();
-#ifdef __3DS__
-	// 3DS has no keyboard to toggle cheats on, so enable them at game start.
-	// This is what makes the levelwarp / start-at-level cheats reachable via
-	// controller. Desktop builds leave this off (user types the code).
-	cheats.enabled = 1;
-#endif
 }
 
 //	-----------------------------------------------------------------------------
@@ -1263,6 +1257,10 @@ void bash_to_shield (int i,char *s)
 //called when the player is starting a new level for normal game model
 void StartNewLevel(int level_num)
 {
+#ifdef __3DS__
+	stereo_resume();
+	{ extern void tactical_bottom_init(void); tactical_bottom_init(); }
+#endif
 	hide_menus();
 
 	GameTime64 = 0;

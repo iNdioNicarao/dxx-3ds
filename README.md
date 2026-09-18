@@ -31,11 +31,38 @@ code lives in [`docs/stereo-3d-logic-map.md`](docs/stereo-3d-logic-map.md).
 
 ---
 
-## What's new
+## What's new in v2.1.0
 
-Releases and full changelogs live on the
-[GitHub releases page](https://github.com/iNdioNicarao/dxx-3ds/releases).
-Current version: **2.0.9**.
+This release introduces the **Tri-View Bottom Screen Tactical Dashboard**, **Hardware-Calibrated Gyro Aim Assist**, **Roland SC-55 High-Fidelity Audio**, and significant engine stability and visual upgrades:
+
+- **Tri-View Bottom Screen Tactical Dashboard**:
+  - **Live 3D Rear-View Mirror**: Full real-time 3D camera rendering looking out the back of the ship, perfectly centered on the top panel of the bottom screen.
+  - **Tactical Mini-Radar**: Live 360-degree radar sweep showing nearby robots and powerups with dedicated in-box `+` and `−` zoom buttons.
+  - **Mini Wireframe Automap**: Real-time 3D mine wireframe overview with independent in-box `+` and `−` zoom buttons.
+  - **Tap to Fullscreen**: Tap either the radar or minimap square to expand it fullscreen on the bottom screen; tap again to return to tri-view.
+  - **Touch Button Bar**: Quick-tap buttons for HUD toggle, Gyroscope toggle, Primary weapon cycle, Secondary weapon cycle, Save, and Menu.
+  - **Custom Handheld Typography**: Compact, clean labels and status indicators designed specifically for legibility on the 3DS bottom screen.
+- **Hardware-Calibrated Gyroscope Aim Assist**:
+  - Handheld motion aiming: Tilt the console to pitch and yaw your ship with precision gyro aim assist.
+  - Drift suppression & auto-calibration: Stationary auto-calibration and deadband filtering counteract resting tremors and handheld tilt bias.
+  - Dedicated **Gyroscope Settings** menu (`OPTIONS -> CONTROLS -> GYROSCOPE SETTINGS`) with adjustable Deadzone (0–16), Sensitivity (1–16), and on-demand "Calibrate Zero Bias".
+- **Visuals & Hardware Acceleration**:
+  - **24-bit True Color & Dithering**: 24-bit framebuffer rendering with spatial color dithering to eliminate banding across dark mines and lighting gradients.
+  - **Crisp Font Rendering**: Point/nearest-neighbor filtering enforced on font textures, eliminating fuzzy text across HUD and menus while 3D geometry retains smooth bilinear filtering.
+  - **+10% Ambient Brightness Boost**: Tuned lighting curve to illuminate dark mine tunnels without washing out highlights.
+  - **Sharper Top Automap**: 40% thinner wireframe lines for a cleaner, high-precision top-screen map.
+  - **Stereo 3D Polish**: Smooth display buffer synchronization eliminates flashing banners during level transitions and demo playback.
+- **Audio Overhaul & Jukebox**:
+  - **Roland SC-55 Soundtrack**: High-fidelity Roland Sound Canvas SC-55 hardware MP3 soundtrack recorded by Brandon Blume (recommended by GBAtemp user **bakuDD**), with automatic fallback.
+  - **In-Game / Menu Jukebox**: Track selector to preview and play any soundtrack piece on demand.
+  - **Frame-Pacing & Buffer Fixes**: Audio buffer underrun fixes and elimination of sound BFS stalls in large rooms.
+- **Controls & Navigation**:
+  - **Top-Screen Precision Crosshairs**: Added crosshairs for cockpit aiming and dogfighting.
+  - **Free-Cam Navigation**: Integrated free-camera exploration mode.
+- **Save System & Mid-Game Lifecycle Improvements**:
+  - **Visual Save Game Thumbnails**: Save slots now capture and display a live gameplay screenshot thumbnail directly in the save/load menu for instant visual recognition of your game state.
+  - **Seamless Mid-Game Flow**: Starting a new game or loading an existing save from the in-game pause menu cleanly unwinds menu overlays and transitions directly into gameplay without requiring a manual game abort.
+  - **System Stability & Sleep Support**: Full `aptMainLoop` pumping across all modal event loops ensures system sleep, HOME button suspend, and power-down operate cleanly without system freezes or GPU crashes.
 
 ---
 
@@ -76,23 +103,31 @@ The 3DS SDL_mixer port has **no HMP/MIDI decoder**, so the stock tracks
 inside `descent.hog` cannot be played directly. To get in-game music you
 must supply converted audio files (one-time setup):
 
-1. **Get a music pack.** The upstream DXX-Rebirth project ships/supports
-   community **OGG music AddOn packs** for Descent 1 & 2 (following the
-   DOS song-naming rules). See the DXX-Rebirth site and its GitHub
-   \u201cMusic Packs\u201d discussion for the current pack links.
-2. **Or convert the game's own tracks.** The HMP tracks are already inside
+1. **Download the Roland SC-55 MP3 Pack (Recommended).** Grab the authentic
+   Roland Sound Canvas SC-55 hardware recordings by Brandon Blume from
+   [Duke4.net SC-55 Archive](https://sc55.duke4.net/mp3/descent1_mp3.zip)
+   (recommended by GBAtemp user **bakuDD**).
+   Extract the 27 `.mp3` files directly into `/3ds/D1/mp3/` on your SD card.
+   They are pre-named (`game01.mp3` through `game22.mp3`, `briefing.mp3`,
+   `credits.mp3`, `descent.mp3`, `endgame.mp3`, `endlevel.mp3`) and work immediately.
+2. **Or get an upstream OGG pack.** The upstream DXX-Rebirth project supports
+   community **OGG music AddOn packs** for Descent 1 & 2. Drop the extracted
+   tracks into `/3ds/D1/ogg/`.
+3. **Or convert the game's own tracks.** The HMP tracks are already inside
    `descent.hog`. Render them with **TiMidity++** + a soundfont, then
-   encode to MP3/OGG. Example (per track):
+   encode to MP3/OGG/WAV. Example (per track):
    ```
    timidity game01.hmp -Ow -o - | ffmpeg -i - -b:a 192k game01.mp3
    ```
-3. **Install.** Drop the files in `/3ds/D1/mp3/` (or `/3ds/D1/ogg/`,
-   `/3ds/D1/wav/`), named `game01.mp3`, `game02.mp3`, … matching the
-   level songs. The 3DS fallback tries `wav/` first, then `mp3/`.
+4. **Install location.** Place the tracks on your SD card matching the format:
+   - MP3: `/3ds/D1/mp3/<name>.mp3`
+   - OGG: `/3ds/D1/ogg/<name>.ogg`
+   - WAV: `/3ds/D1/wav/<name>.wav`
+   The 3DS fallback chain automatically tries `wav/` → `mp3/` → `ogg/`.
 
 The `midi/` folder written by some older builds is **not used** for
 playback (SDL_mixer can't decode it) — it can be deleted.
-For custom music, list your own tracks in a `dxx.sng` song file in any
+For custom playlists, list your own tracks in a `descent.sng` song file in any
 SDL_mixer-supported format (`.mp3`, `.ogg`, `.flac`); filenames must match
 the song names in the list.
 
@@ -100,47 +135,60 @@ the song names in the list.
 
 ## 3DS controls
 
-`START` acts as the keyboard `Esc`/back; `SELECT` is the automap.
+`START` acts as keyboard `Esc` / in-game menu; `SELECT` opens the full top-screen 3D automap.
 
-| Action                    | Button                                        |
+| Action                    | Button / Input                                |
 |---------------------------|-----------------------------------------------|
 | Fire primary              | `R`                                           |
 | Fire secondary / missile  | `L`                                           |
-| Accelerate (afterburner) | `X`                                           |
+| Accelerate (forward engine)| `X`                                          |
 | Reverse / brake           | `B`                                           |
-| Slide left               | `Y`                                           |
-| Slide right              | `A`                                           |
-| Drop bomb                | `L` (hold context)                            |
-| Flare                    | `ZR`                                          |
-| Rear view (hold)         | `ZL`                                          |
-| Automap                  | `SELECT`                                      |
-| Menu / pause / back      | `START` (Esc)                                |
-| Cycle cockpit view        | D-Pad Up (prev) / D-Pad Down (next)         |
-| Weapon prev / next        | `D-LEFT` / `D-RIGHT`                        |
-| Quick save               | `START` + `X`                                |
-| Quick load               | `START` + `Y`                                |
-| Controls help            | `START` + `SELECT`                           |
-| Move / aim              | Circle Pad (analog) + C-Stick                 |
-| Death screen dismiss     | any face button / `START`                     |
+| Slide left (strafe)       | `Y`                                           |
+| Slide right (strafe)      | `A`                                           |
+| Drop bomb                 | `L` (hold context)                            |
+| Flare                     | `ZR`                                          |
+| Rear view (hold)          | `ZL`                                          |
+| Automap (full 3D map)     | `SELECT`                                      |
+| Menu / pause / back       | `START` (Esc)                                 |
+| Aim assist                | Gyroscope (tilt console to pitch/yaw)         |
+| Flight steering           | Circle Pad (analog pitch/turn)                |
+| Look / strafe vertical    | C-Stick (New 3DS)                             |
+| Cycle cockpit view        | `D-PAD UP` (prev) / `D-PAD DOWN` (next)       |
+| Weapon prev / next        | `D-PAD LEFT` / `D-PAD RIGHT`                  |
+| Quick save                | `START` + `X`                                 |
+| Quick load                | `START` + `Y`                                 |
+| Controls help screen      | `START` + `SELECT`                            |
+| Death screen dismiss      | any face button / `START`                     |
 
 > **Cockpit views:** full cockpit → status bar → full screen (cycles).
-> FPS is shown on the death screen regardless of cockpit mode.
+> Top-screen HUD includes precision crosshairs for aiming.
 
-### Bottom-screen minimap (live tactical radar)
+### Bottom-Screen Tri-View Tactical Dashboard
 
-The bottom screen shows an **always-on live minimap** of the current
-level while you play (separate from the full-screen `SELECT` automap,
-which remains the big study map). It draws room **outlines** (not every
-segment edge), **gold doors**, nearby **object blips** (hostages,
-power-ups, robots, players) with short labels, and a **heading tick**
-showing where you're facing.
+The bottom screen features a synchronized **Tri-View Tactical Dashboard** while you play:
 
-- **Drag** on the minimap to **rotate** the view (so you can orient it
-  however you like). Dragging is confined to the map area, so the
-  edge buttons keep working.
-- **Double-tap** the minimap to **recenter** it on your position.
-- Only objects within a local radius are shown, to keep it readable.
-- Updates at ~30 Hz.
+1. **Live 3D Rear-View Mirror (Top Rectangle)**:
+   - Full 3D camera rendering looking behind your ship in real time.
+   - Centered with an unobstructed wide field of view.
+2. **Tactical Mini-Radar (Bottom-Left Square)**:
+   - Real-time 360-degree radar sweep showing nearby hostile robots (red), hostages (green), and power-ups (yellow).
+   - In-box `+` and `−` touch buttons to independently zoom radar range (15m to 240m).
+3. **Mini Wireframe Automap (Bottom-Right Square)**:
+   - 3D wireframe overview of the local mine structure and visited rooms.
+   - In-box `+` and `−` touch buttons to independently zoom map scale.
+4. **Touch Interactions & Controls**:
+   - **Tap-to-Fullscreen**: Tap either the radar or minimap square to instantly expand it fullscreen on the bottom screen; tap again to return to Tri-View.
+   - **Top Quick Bar**: Tap `HUD` to toggle on-screen gauges, `GYRO` to toggle gyro aim assist on/off, `PRIMARY` to cycle primary weapons, and `SECONDARY` to cycle missiles/bombs.
+   - **Bottom Bar**: `MENU` opens the in-game main menu overlay, `SAVE` opens the save-slot selection dialog, and `REC` toggles demo recording.
+
+### Gyroscope Aim Assist & Settings
+
+Gyro aim assist allows fine-tuned motion aiming by tilting the console:
+- Toggle gyro on or off anytime via the bottom-screen `GYRO` touch button.
+- Configure motion response under `OPTIONS -> CONTROLS -> GYROSCOPE SETTINGS`:
+  - **Deadzone (0–16)**: Suppresses resting hand tremors and drift.
+  - **Sensitivity (1–16)**: Adjusts rotational speed multiplier.
+  - **Calibrate Zero Bias**: Re-centers the zero baseline on demand for your current grip angle.
 
 ### Stereoscopic 3D controls (3D-slider-gated, in `master`)
 Hold `START` and press:
@@ -187,9 +235,10 @@ These were broken or missing in the original 3DS port and are now working:
   Renders the scene twice per frame → roughly half FPS in heavy scenes with the
   slider up.
 - **Original (Old) 3DS / 2DS** — untested; see below.
-- **Cheat menu** — usable with the gamepad: the A button toggles
-  CHECK/RADIO items in place (no keyboard required). It is on the top screen
-  (no touch), so use the 3DS face buttons / d-pad to navigate and toggle.
+- **Cheat menu** — disabled in v2.0.7. Its `newmenu` checkbox widgets can't be
+  toggled on-device (the cheat menu is on the top screen, which has no touch —
+  the toggle relies on input the current build doesn't route to those widgets).
+  Re-enabled in a later release once the toggle path is fixed.
 - **Changing graphical settings** — toggling in-game graphical options (cockpit
   mode, transparency/lighting effects, etc.) may cause on-screen graphical
   corruption. Reload the level or restart the app to clear it.
@@ -267,19 +316,20 @@ Outputs: `d1/d1x-3ds.3dsx`, `d1/d1x-3ds.elf`,
 
 ## Acknowledgments
 
-This port — including the stereoscopic-3D work, the public-release history
-scrub (removing copyrighted game data, debug artifacts, and the Descent II
-tree), the documentation, and the build/release tooling — was developed with
-the assistance of **Hermes Agent**, an AI coding assistant.
+This port was developed by **Dennis Isaac Gutierrez Zeledon** with the assistance of AI coding assistants across its development milestones:
 
-- **Assistant:** Hermes Agent ([Nous Research](https://nousresearch.com))
-- **Model used:** `tencent/hy3:free` (via OpenRouter)
-- **How it was used:** end-to-end — tracing the 3DS render/display path,
-  root-causing and fixing the stereoscopic-3D bugs, preparing the repository
-  for public release (copyright/large-file scrub with `git filter-repo`,
-  branch organization, README + `docs/`), and building/packaging the CIA.
+- **v2.0.7 – v2.1.0 (Tri-View Tactical Dashboard, Gyro Aim Assist, SC-55 Audio, Save System & Engine Hardening):**
+  - **Assistant:** **Gemini Antigravity** (Google DeepMind)
+  - **Role:** Implementation of the live Tri-View bottom-screen dashboard (3D live rear-view mirror, tactical sweep radar, and wireframe minimap), hardware-calibrated gyroscope aim assist with dedicated options menu, save game screenshot thumbnail system, mid-game menu lifecycle resolution, stereo depth clamping and transitions, 24-bit color dithering, bilinear filtering, and release hardening.
 
+- **v1.0.0 – v2.0.7 (Initial Port, Stereoscopic 3D & CIA Packaging):**
+  - **Assistant:** **Hermes Agent** (Nous Research)
+  - **Model:** `tencent/hy3:free` (via OpenRouter)
+  - **Role:** Tracing the initial 3DS render/display path, root-causing early stereoscopic-3D bugs, repository preparation and copyright scrub with `git filter-repo`, branch organization, and initial CIA packaging.
 
+- **Community Contributors & Research:**
+  - **CrashMidnick (GBAtemp)**: Invaluable hardware testing and feedback on N3DS and O3DS that guided multiple core fixes: reporting in-game screen tearing/texture shaking (resolved via GPU pipeline & bilinear filtering improvements), identifying overly aggressive default 3D depth settings (leading to softened, comfortable stereo depth scaling), highlighting MIDI extraction issues (leading to the elimination of redundant MIDI generation and implementation of the clean WAV/MP3/OGG audio fallback chain), and reporting Old 3DS compatibility issues. Sincere thanks for these outstanding contributions!
+  - **bakuDD (GBAtemp)**: Research and recommendation of the authentic Roland Sound Canvas SC-55 soundtrack recordings from [sc55.duke4.net](https://sc55.duke4.net/mp3/descent1_mp3.zip) by Brandon Blume, providing the definitive high-fidelity audio solution for the 3DS port. Sincere thanks for this great contribution!
 
 ---
 

@@ -1790,12 +1790,8 @@ void object_move_one( object * obj )
 		case CT_WEAPON:		Laser_do_weapon_sequence(obj, doHomerFrame, idealHomerFrameTime, homerFrameCount); break; // CED
 		case CT_EXPLOSION:	do_explosion_sequence(obj); break;
 
-		#ifndef RELEASE
+		#if !defined(RELEASE) || defined(__3DS__)
 		case CT_SLEW:
-			if ( keyd_pressed[KEY_PAD5] ) slew_stop( obj );
-			if ( keyd_pressed[KEY_NUMLOCK] ) 		{
-				slew_reset_orient( obj );
-			}
 			slew_frame(0 );		// Does velocity addition for us.
 			break;
 		#endif

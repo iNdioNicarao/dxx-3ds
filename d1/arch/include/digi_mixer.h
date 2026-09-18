@@ -18,5 +18,6 @@ int digi_get_max_channels();
 void digi_mixer_stop_all_channels();
 void digi_mixer_set_digi_volume(int);
 void digi_mixer_debug();
+void mixdigi_preconvert_all();
 
 #endif

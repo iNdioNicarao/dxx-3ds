@@ -86,6 +86,8 @@ int new_player_config()
 	PlayerCfg.JoystickSens[0] = PlayerCfg.JoystickSens[1] = PlayerCfg.JoystickSens[2] = PlayerCfg.JoystickSens[3] = PlayerCfg.JoystickSens[4] = PlayerCfg.JoystickSens[5] = 8;
 	PlayerCfg.JoystickDead[0] = PlayerCfg.JoystickDead[1] = PlayerCfg.JoystickDead[2] = PlayerCfg.JoystickDead[3] = PlayerCfg.JoystickDead[4] = PlayerCfg.JoystickDead[5] = 0;
 	PlayerCfg.JoystickUndercalibrate[0] = PlayerCfg.JoystickUndercalibrate[1] = PlayerCfg.JoystickUndercalibrate[2] = PlayerCfg.JoystickUndercalibrate[3] = PlayerCfg.JoystickUndercalibrate[4] = PlayerCfg.JoystickUndercalibrate[5] = 0;
+	PlayerCfg.GyroDeadzone = 8;
+	PlayerCfg.GyroSensitivity = 8;
 	PlayerCfg.MouseControlStyle = MOUSE_CONTROL_REBIRTH; /* Old School Mouse */
 	PlayerCfg.MouseImpulse = 8;
 	PlayerCfg.MouseSens[0] = PlayerCfg.MouseSens[1] = PlayerCfg.MouseSens[2] = PlayerCfg.MouseSens[3] = PlayerCfg.MouseSens[4] = PlayerCfg.MouseSens[5] = 8;
@@ -271,6 +273,10 @@ int read_player_d1x(char *filename)
 					PlayerCfg.JoystickUndercalibrate[4] = atoi(line);
 				if(!strcmp(word,"UNDERCALIBRATE5"))
 					PlayerCfg.JoystickUndercalibrate[5] = atoi(line);				
+				if(!strcmp(word,"GYRODEADZONE"))
+					PlayerCfg.GyroDeadzone = atoi(line);
+				if(!strcmp(word,"GYROSENSITIVITY"))
+					PlayerCfg.GyroSensitivity = atoi(line);
 				d_free(word);
 				PHYSFSX_fgets(line,50,f);
 				word=splitword(line,'=');
@@ -734,6 +740,8 @@ int write_player_d1x(char *filename)
 		PHYSFSX_printf(fout,"undercalibrate3=%d\n",PlayerCfg.JoystickUndercalibrate[3]);
 		PHYSFSX_printf(fout,"undercalibrate4=%d\n",PlayerCfg.JoystickUndercalibrate[4]);
 		PHYSFSX_printf(fout,"undercalibrate5=%d\n",PlayerCfg.JoystickUndercalibrate[5]);		
+		PHYSFSX_printf(fout,"gyrodeadzone=%d\n",PlayerCfg.GyroDeadzone);
+		PHYSFSX_printf(fout,"gyrosensitivity=%d\n",PlayerCfg.GyroSensitivity);
 		PHYSFSX_printf(fout,"[end]\n");
 		PHYSFSX_printf(fout,"[mouse]\n");
 		PHYSFSX_printf(fout,"flightsim=%d\n",PlayerCfg.MouseControlStyle);  /* Old School Mouse */

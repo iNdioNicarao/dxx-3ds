@@ -35,7 +35,9 @@
 #define MIX_OUTPUT_CHANNELS	2
 
 #define MAX_SOUND_SLOTS 64
-#if !((defined(__APPLE__) && defined(__MACH__)) || defined(macintosh))
+#if defined(__3DS__)
+#define SOUND_BUFFER_SIZE 4096
+#elif !((defined(__APPLE__) && defined(__MACH__)) || defined(macintosh))
 #define SOUND_BUFFER_SIZE 2048
 #else
 #define SOUND_BUFFER_SIZE 1024
@@ -118,14 +120,30 @@ void mixdigi_convert_sound(int i)
 		SDL_BuildAudioCVT(&cvt, AUDIO_U8, 1, freq, MIX_OUTPUT_FORMAT, MIX_OUTPUT_CHANNELS, digi_sample_rate);
 
 		cvt.buf = malloc(dlen * cvt.len_mult);
+		if (!cvt.buf) return;
+		memset(cvt.buf, 0, dlen * cvt.len_mult);
 		cvt.len = dlen;
 		memcpy(cvt.buf, data, dlen);
 		if (SDL_ConvertAudio(&cvt)) con_printf(CON_DEBUG,"conversion of %d failed\n", i);
 
 		SoundChunks[i].abuf = cvt.buf;
-		SoundChunks[i].alen = dlen * cvt.len_mult;
+		SoundChunks[i].alen = cvt.len_cvt;
 		SoundChunks[i].allocated = 1;
 		SoundChunks[i].volume = 128; // Max volume = 128
+	}
+}
+
+void mixdigi_preconvert_all(void)
+{
+	int i;
+	if (!digi_initialised)
+		return;
+	for (i = 0; i < MAX_SOUNDS; i++)
+	{
+		if (GameSounds[i].data != NULL && GameSounds[i].data != (void *)-1)
+		{
+			mixdigi_convert_sound(i);
+		}
 	}
 }
 

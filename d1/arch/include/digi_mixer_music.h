@@ -15,5 +15,7 @@ void mix_pause_music();
 void mix_resume_music();
 void mix_pause_resume_music();
 void mix_free_music();
+void digi_mixer_music_preload(const char *filename);
+void digi_mixer_music_cancel_preload(void);
 
 #endif

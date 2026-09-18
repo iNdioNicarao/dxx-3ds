@@ -60,6 +60,7 @@ extern void newdemo_stop_recording(void);
 
 /* --- module state --- */
 static u16 *g_bot_buf = NULL;
+static u16 *g_bot_backbuf = NULL;
 static int  g_bot_w = 0;
 static int  g_bot_h = 0;
 static bs_mode_t g_mode = BS_MODE_OFF;
@@ -220,20 +221,22 @@ static const uint8_t font[95][8] = {
 static void bottom_set_px(int x, int y, uint16_t c)
 {
 	int fx, fy, idx;
-	if (!g_bot_buf) return;
+	uint16_t *dst = g_bot_backbuf ? g_bot_backbuf : g_bot_buf;
+	if (!dst) return;
 	if (x < 0 || x >= BS_LOGICAL_W || y < 0 || y >= BS_LOGICAL_H) return;
 	fx = BS_LOGICAL_H - 1 - y;   /* 239 - y : rotate 90deg CW */
 	fy = x;
 	idx = fx + fy * g_bot_w;   /* g_bot_w == 240 == framebuffer stride */
-	g_bot_buf[idx] = c;
+	dst[idx] = c;
 }
 
 void bottom_clear(uint16_t rgb565)
 {
 	int i;
-	if (!g_bot_buf) return;
+	uint16_t *dst = g_bot_backbuf ? g_bot_backbuf : g_bot_buf;
+	if (!dst) return;
 	for (i = 0; i < g_bot_w * g_bot_h; i++)
-		g_bot_buf[i] = rgb565;
+		dst[i] = rgb565;
 	g_bg_painted = 0;     /* base must be repainted before buttons redraw */
 	g_bottom_dirty = 1;   /* a full repaint is now pending */
 }
@@ -293,6 +296,36 @@ void bottom_blit_canvas_region(grs_bitmap *src, int dx, int dy, int dw, int dh)
 	g_bottom_dirty = 1;
 }
 
+/* Blit 3D rendered rear-view mirror from linear buffer into bottom screen backbuffer */
+void bottom_copy_rear_view(const uint16_t *src, int mx, int my, int mw, int mh)
+{
+	uint16_t *dst = g_bot_backbuf ? g_bot_backbuf : g_bot_buf;
+	if (!dst || !src) return;
+	if (mx < 0 || mx >= BS_LOGICAL_W || my < 0 || my >= BS_LOGICAL_H) return;
+	if (mw <= 0 || mh <= 0) return;
+	if (mx + mw > BS_LOGICAL_W) mw = BS_LOGICAL_W - mx;
+	if (my + mh > BS_LOGICAL_H) mh = BS_LOGICAL_H - my;
+
+	/* Center the sampled region inside the 320x240 source */
+	int x_src_start = (BS_LOGICAL_W - mw) / 2;
+	if (x_src_start < 0) x_src_start = 0;
+
+	int y_src_start = (BS_LOGICAL_H - mh) / 2;
+	if (y_src_start < 0) y_src_start = 0;
+
+	int x;
+	for (x = 0; x < mw; x++) {
+		int sx = x_src_start + x;
+		int dx = mx + x;
+		if (sx >= BS_LOGICAL_W || dx >= BS_LOGICAL_W) break;
+
+		int src_base = sx * g_bot_w + (239 - (y_src_start + mh - 1));
+		int dst_base = dx * g_bot_w + (239 - (my + mh - 1));
+		memcpy(&dst[dst_base], &src[src_base], mh * sizeof(uint16_t));
+	}
+	g_bottom_dirty = 1;
+}
+
 /* Clear the center safe-area rectangle (where the minimap lives) so the map
  * never bleeds into the button rows. Logical coords. */
 void bottom_clear_rect(int x, int y, int w, int h)
@@ -337,6 +370,31 @@ void bottom_draw_rect(int x, int y, int w, int h, uint16_t c,
 	bottom_draw_line(x, y + h, x, y, c, cx, cy, cw, ch);
 }
 
+void bottom_set_pixel(int x, int y, uint16_t c)
+{
+	bottom_set_px(x, y, c);
+	g_bottom_dirty = 1;
+}
+
+void bottom_draw_circle(int cx, int cy, int r, uint16_t c,
+			int bx, int by, int bw, int bh)
+{
+	int x = 0, y = r;
+	int d = 3 - 2 * r;
+	while (y >= x) {
+		#define PLOT(px, py) do { if ((px) >= bx && (px) < bx+bw && (py) >= by && (py) < by+bh) bottom_set_px(px, py, c); } while(0)
+		PLOT(cx + x, cy + y); PLOT(cx - x, cy + y);
+		PLOT(cx + x, cy - y); PLOT(cx - x, cy - y);
+		PLOT(cx + y, cy + x); PLOT(cx - y, cy + x);
+		PLOT(cx + y, cy - x); PLOT(cx - y, cy - x);
+		#undef PLOT
+		x++;
+		if (d > 0) { y--; d = d + 4 * (x - y) + 10; }
+		else { d = d + 4 * x + 6; }
+	}
+	g_bottom_dirty = 1;
+}
+
 void bottom_print(int x, int y, const char *s, uint16_t rgb565)
 {
 	int cx = x;
@@ -360,6 +418,31 @@ void bottom_print(int x, int y, const char *s, uint16_t rgb565)
 		}
 		cx += 8;
 	}
+}
+
+void bottom_print_clipped(int x, int y, const char *s, uint16_t rgb565, int bx, int by, int bw, int bh)
+{
+	int cx = x;
+	if (!g_bot_buf || !s) return;
+	for (; *s; s++) {
+		int c = (unsigned char)*s;
+		int gx, gy;
+		if (c < 32 || c > 126) c = 32;
+		c -= 32;
+		for (gy = 0; gy < 8; gy++) {
+			uint8_t row = font[c][gy];
+			for (gx = 0; gx < 8; gx++) {
+				if (row & (0x01 << gx)) {
+					int px = cx + gx;
+					int py = y + gy;
+					if (px >= bx && px < bx + bw && py >= by && py < by + bh)
+						bottom_set_px(px, py, rgb565);
+				}
+			}
+		}
+		cx += 8;
+	}
+	g_bottom_dirty = 1;
 }
 
 /* Draw text using a REAL Descent game font (passed in) and replicate the
@@ -439,15 +522,19 @@ void bottom_screen_init(void)
 {
 	if (!g_inited) {
 		u16 bw = 0, bh = 0;
-		/* Single-buffered bottom: we own one framebuffer and just flush it
-		 * each frame. Double buffering here caused the bottom to strobe
-		 * (each gfxScreenSwapBuffers flips the drawable buffer and our
-		 * per-frame re-fetch wrote to the wrong/back buffer). With one
-		 * buffer there is nothing to swap — gfxFlushBuffers() pushes it. */
+		/* Single-buffered bottom with an offscreen linear backbuffer: all drawing
+		 * targets g_bot_backbuf, and bottom_screen_present() copies the completed
+		 * frame to g_bot_buf at VBlank. This guarantees ZERO tear lines or black
+		 * strips across the tactical radar, minimap, and rearview mirror. */
 		gfxSetDoubleBuffering(GFX_BOTTOM, false);
 		g_bot_buf = (u16 *)gfxGetFramebuffer(GFX_BOTTOM, GFX_LEFT, &bw, &bh);
 		g_bot_w = (int)bw;
 		g_bot_h = (int)bh;
+		if (!g_bot_backbuf) {
+			g_bot_backbuf = (u16 *)linearAlloc(g_bot_w * g_bot_h * sizeof(u16));
+			if (g_bot_backbuf)
+				memset(g_bot_backbuf, 0, g_bot_w * g_bot_h * sizeof(u16));
+		}
 		g_mode = BS_MODE_OFF;
 		g_inited = 1;
 		g_bottom_active = 1;   /* our framebuffer is now owned + live */
@@ -490,7 +577,7 @@ void bottom_set_mode(bs_mode_t m)
 		bottom_clear(0x0000);   /* static blank, drawn once */
 		break;
 	}
-	gfxFlushBuffers();
+	bottom_screen_present();
 }
 
 bs_mode_t bottom_get_mode(void)
@@ -521,6 +608,9 @@ void bottom_screen_present(void)
 		return;
 
 	gspWaitForVBlank();
+	if (g_bot_backbuf) {
+		memcpy(g_bot_buf, g_bot_backbuf, g_bot_w * g_bot_h * sizeof(uint16_t));
+	}
 	gfxFlushBuffers();
 	g_bottom_dirty = 0;
 }
@@ -547,6 +637,7 @@ int bottom_hit(int x, int y, int w, int h, const touchPosition *t)
 #define BTN_BLUE    0x7BEF   /* light blue fill so (29,29,47) text reads clearly */
 #define BTN_BLUE_HI 0x9DE7   /* lighter blue highlight (pressed) */
 #define BTN_RED     0xF800   /* bright red fill (REC/stop recording) */
+#define BTN_GREEN   0x07E0   /* vibrant green (active GYRO indicator) */
 #define BTN_GREY    0x8C71   /* disabled/dim (light grey) */
 /* Bevel edges match the top-screen "Abort game?" popup, drawn by
  * ui_draw_frame() (d1/ui/uidraw.c) with the colours from d1/ui/ui.c:
@@ -723,15 +814,30 @@ static void draw_key(int bx, int by, int bw, int bh,
 	bottom_fill_marble();   /* paints the marble slab once */
 
 	int disabled = (fill == BTN_GREY);
-	/* Disabled = dim grey text ONLY (no box, no fill). */
-	g_fg_r = disabled ? 110 : BTN_TEXT_R;
-	g_fg_g = disabled ? 110 : BTN_TEXT_G;
-	g_fg_b = disabled ? 130 : BTN_TEXT_B;
+	int active = (fill == BTN_GREEN);
+	/* Disabled = dim grey text ONLY (no box, no fill).
+	 * Active = bright green text for active toggles (e.g. GYRO).
+	 * Default = medium-blue/purple text (29,29,47). */
+	if (disabled) {
+		g_fg_r = 110;
+		g_fg_g = 110;
+		g_fg_b = 130;
+	} else if (active) {
+		/* Vibrant green: 5-bit R=4, 6-bit G=60, 5-bit B=4 */
+		g_fg_r = 4;
+		g_fg_g = 60;
+		g_fg_b = 4;
+	} else {
+		g_fg_r = BTN_TEXT_R;
+		g_fg_g = BTN_TEXT_G;
+		g_fg_b = BTN_TEXT_B;
+	}
 
 	g_bottom_dirty = 1;   /* button repaint pending */
 
 	if (label && *label) {
-		grs_font *f = (g_bot_buf && HUGE_FONT) ? HUGE_FONT : NULL;
+		// Scaled down by ~50% (MEDIUM1_FONT ~13px vs HUGE_FONT ~26px) for clean fitting inside buttons
+		grs_font *f = (g_bot_buf && MEDIUM1_FONT) ? MEDIUM1_FONT : ((g_bot_buf && HUGE_FONT) ? HUGE_FONT : NULL);
 		int fw = (int)strlen(label);
 		int gt = 0, gh_draw = 0, tx = bx, ty = by;
 		if (f && f->ft_w > 0) {
@@ -901,10 +1007,13 @@ void bottom_demo_delete_reset(void)
  * Options/Resume live) — the 3DS has no ESC/PAUSE key. The caller taps this
  * into do_game_pause() (NOT window_close: closing Game_wind would hard-exit
  * the game with no way back). Poll each EVENT_IDLE; returns 1 on a fresh tap. */
+#define BOT_BY 216
+#define BOT_BH 22
+
 static int g_menu_btn_prev = 0;
 static int g_menu_btn_state = -1;
 static int g_menu_btn_bbox[4] = {-1,-1,-1,-1};
-static const int MEN_BX = 216, MEN_BY = 210, MEN_BW = 96, MEN_BH = 30;
+static const int MEN_BX = 216, MEN_BY = BOT_BY, MEN_BW = 96, MEN_BH = BOT_BH;
 int bottom_menu_tapped(void)
 {
 	if (g_menu_btn_state != 1) {
@@ -930,7 +1039,7 @@ int bottom_menu_tapped(void)
 static int g_save_btn_prev = 0;
 static int g_save_btn_state = -1;
 static int g_save_btn_bbox[4] = {-1,-1,-1,-1};
-static const int SAV_BX = 8, SAV_BY = 210, SAV_BW = 96, SAV_BH = 30;
+static const int SAV_BX = 8, SAV_BY = BOT_BY, SAV_BW = 96, SAV_BH = BOT_BH;
 int bottom_save_tapped(void)
 {
 	if (g_save_btn_state != 1) {
@@ -962,7 +1071,7 @@ void bottom_save_reset(void)
 static int g_rec_btn_prev = 0;
 static int g_rec_btn_state = -1;
 static int g_rec_btn_bbox[4] = {-1,-1,-1,-1};
-static const int REC_BX = 112, REC_BY = 210, REC_BW = 96, REC_BH = 30;
+static const int REC_BX = 112, REC_BY = BOT_BY, REC_BW = 96, REC_BH = BOT_BH;
 int bottom_rec_tapped(void)
 {
 	int recording = (Newdemo_state == ND_STATE_RECORDING);
@@ -1035,8 +1144,8 @@ void bottom_menu_reset(void)
 /* --- Top-row in-game button: HUD toggle. The 3D depth slider (hardware)
  * handles stereo separation; only PARALLEL mode is used (toe-in removed). */
 
-#define TOP_BY 4
-#define TOP_BH 30
+#define TOP_BY 2
+#define TOP_BH 22
 
 /* HUD toggle button (far left). */
 static int g_hud_btn_prev = 0;
@@ -1063,6 +1172,82 @@ void bottom_hud_reset(void)
 	g_hud_btn_prev = 0;
 }
 
+/* GYRO toggle button (directly next to HUD button, top-left row). */
+static int g_gyro_btn_prev = 0;
+static int g_gyro_btn_state = -1;
+static int g_gyro_btn_bbox[4] = {-1,-1,-1,-1};
+#define GYRO_BX 64, GYRO_BY, GYRO_BW, GYRO_BH
+static const int GYRO_BY = TOP_BY, GYRO_BW = 56, GYRO_BH = TOP_BH;
+int bottom_gyro_tapped(int enabled)
+{
+	if (g_gyro_btn_state != enabled) {
+		g_gyro_btn_state = enabled;
+		draw_key(GYRO_BX, enabled ? BTN_GREEN : BTN_GREY, "GYRO", g_gyro_btn_bbox);
+	}
+	touchPosition t;
+	hidTouchRead(&t);
+	int held = (hidKeysHeld() & KEY_TOUCH) && bottom_hit(GYRO_BX, &t);
+	int tapped = held && !g_gyro_btn_prev;
+	g_gyro_btn_prev = held;
+	return tapped ? 1 : 0;
+}
+void bottom_gyro_reset(void)
+{
+	g_gyro_btn_state = -1;
+	g_gyro_btn_prev = 0;
+}
+
+/* Primary weapon cycle button (PRI). */
+static int g_pri_btn_prev = 0;
+static int g_pri_btn_state = -1;
+static int g_pri_btn_bbox[4] = {-1,-1,-1,-1};
+#define PRI_BX 124, PRI_BY, PRI_BW, PRI_BH
+static const int PRI_BY = TOP_BY, PRI_BW = 50, PRI_BH = TOP_BH;
+int bottom_pri_tapped(void)
+{
+	if (g_pri_btn_state != 1) {
+		g_pri_btn_state = 1;
+		draw_key(PRI_BX, BTN_BLUE, "PRI", g_pri_btn_bbox);
+	}
+	touchPosition t;
+	hidTouchRead(&t);
+	int held = (hidKeysHeld() & KEY_TOUCH) && bottom_hit(PRI_BX, &t);
+	int tapped = held && !g_pri_btn_prev;
+	g_pri_btn_prev = held;
+	return tapped ? 1 : 0;
+}
+void bottom_pri_reset(void)
+{
+	g_pri_btn_state = -1;
+	g_pri_btn_prev = 0;
+}
+
+/* Secondary weapon cycle button (SEC). */
+static int g_sec_btn_prev = 0;
+static int g_sec_btn_state = -1;
+static int g_sec_btn_bbox[4] = {-1,-1,-1,-1};
+#define SEC_BX 178, SEC_BY, SEC_BW, SEC_BH
+static const int SEC_BY = TOP_BY, SEC_BW = 50, SEC_BH = TOP_BH;
+int bottom_sec_tapped(void)
+{
+	if (g_sec_btn_state != 1) {
+		g_sec_btn_state = 1;
+		draw_key(SEC_BX, BTN_BLUE, "SEC", g_sec_btn_bbox);
+	}
+	touchPosition t;
+	hidTouchRead(&t);
+	int held = (hidKeysHeld() & KEY_TOUCH) && bottom_hit(SEC_BX, &t);
+	int tapped = held && !g_sec_btn_prev;
+	g_sec_btn_prev = held;
+	return tapped ? 1 : 0;
+}
+void bottom_sec_reset(void)
+{
+	g_sec_btn_state = -1;
+	g_sec_btn_prev = 0;
+}
+
+
 /* --- HUD toggle (top-left) stays; stereo buttons removed: the 3D slider
  * handles separation, and only PARALLEL mode is used. --- */
 #else
@@ -1071,4 +1256,12 @@ static inline int bottom_pilot_delete_tapped(int enable) { (void)enable; return 
 static inline void bottom_pilot_delete_reset(void) {}
 static inline int bottom_menu_tapped(void) { return 0; }
 static inline void bottom_menu_reset(void) {}
+static inline int bottom_hud_tapped(void) { return 0; }
+static inline void bottom_hud_reset(void) {}
+static inline int bottom_gyro_tapped(int enabled) { (void)enabled; return 0; }
+static inline void bottom_gyro_reset(void) {}
+static inline int bottom_pri_tapped(void) { return 0; }
+static inline void bottom_pri_reset(void) {}
+static inline int bottom_sec_tapped(void) { return 0; }
+static inline void bottom_sec_reset(void) {}
 #endif

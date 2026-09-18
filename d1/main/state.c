@@ -86,6 +86,49 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #define THUMBNAIL_H 50
 #define DESC_LENGTH 20
 
+#ifdef __3DS__
+#include <3ds.h>
+static ubyte s_gameplay_thumbnail[THUMBNAIL_W * THUMBNAIL_H];
+static int s_gameplay_thumbnail_valid = 0;
+
+static void capture_3ds_thumbnail(ubyte *dest_100x50)
+{
+	u8 *fb = (u8 *)gfxGetFramebuffer(GFX_TOP, GFX_LEFT, NULL, NULL);
+	if (!fb) {
+		memset(dest_100x50, 0, THUMBNAIL_W * THUMBNAIL_H);
+		return;
+	}
+
+	// 3DS Top framebuffer is 240x400 (stored vertically, GSP_BGR8_OES: B, G, R).
+	// Stride is 240. Sample directly from memory to avoid GPU context corruption.
+	int tx, ty;
+	for (ty = 0; ty < THUMBNAIL_H; ty++) {
+		int sy = (ty * 240) / THUMBNAIL_H + 2;
+		if (sy >= 240) sy = 239;
+		int fx = 239 - sy;
+
+		for (tx = 0; tx < THUMBNAIL_W; tx++) {
+			int sx = (tx * 400) / THUMBNAIL_W + 2;
+			if (sx >= 400) sx = 399;
+			int fy = sx;
+
+			int byte_idx = (fx + fy * 240) * 3;
+			u8 b = fb[byte_idx + 0];
+			u8 g = fb[byte_idx + 1];
+			u8 r = fb[byte_idx + 2];
+
+			dest_100x50[ty * THUMBNAIL_W + tx] = gr_find_closest_color(r >> 2, g >> 2, b >> 2);
+		}
+	}
+}
+
+void state_capture_gameplay_thumbnail(void)
+{
+	capture_3ds_thumbnail(s_gameplay_thumbnail);
+	s_gameplay_thumbnail_valid = 1;
+}
+#endif
+
 extern int Do_appearance_effect;
 
 int state_save_all_sub(char *filename, char *desc);
@@ -517,26 +560,22 @@ int state_callback(newmenu *menu, d_event *event, grs_bitmap *sc_bmp[])
 	if ( (citem > 0) && (event->type == EVENT_NEWMENU_DRAW) )
 	{
 		if ( sc_bmp[citem-1] ){
-			grs_canvas *save_canv = grd_curcanv;
-#if !defined(OGL) || defined(__3DS__)
-			/* 3DS/picaGL: gr_bitmap is the reliable blit path. Use a 100x50
-			 * temp canvas matching the 1:1 source; the OGL branch's 200x120
-			 * temp made gr_bitmap draw a double-size, garbled thumbnail. */
-			grs_canvas *temp_canv = gr_create_canvas(FSPACX(THUMBNAIL_W),FSPACY(THUMBNAIL_H));
-			grs_point vertbuf[3] = {{0,0}, {0,0}, {i2f(THUMBNAIL_W),i2f(THUMBNAIL_H)} };
-			gr_set_current_canvas(temp_canv);
-			scale_bitmap(sc_bmp[citem-1], vertbuf, 0);
-			gr_set_current_canvas( save_canv );
-			gr_bitmap( (grd_curcanv->cv_bitmap.bm_w/2)-FSPACX(THUMBNAIL_W/2),items[0].y-3, &temp_canv->cv_bitmap);
+			int dw = FSPACX(THUMBNAIL_W);
+			int dh = FSPACY(THUMBNAIL_H);
+			int x = (grd_curcanv->cv_bitmap.bm_w - dw) / 2;
+			int y = items[0].y - FSPACY(3);
+#ifdef OGL
+			ogl_ubitmapm_cs(x, y, dw, dh, sc_bmp[citem-1], -1, F1_0);
 #else
-			grs_canvas *temp_canv = gr_create_canvas(THUMBNAIL_W*2,(THUMBNAIL_H*24/10));
-			grs_point vertbuf[3] = {{0,0}, {0,0}, {i2f(THUMBNAIL_W*2),i2f(THUMBNAIL_H*24/10)} };
+			grs_canvas *save_canv = grd_curcanv;
+			grs_canvas *temp_canv = gr_create_canvas(dw, dh);
+			grs_point vertbuf[3] = {{0,0}, {0,0}, {i2f(temp_canv->cv_bitmap.bm_w), i2f(temp_canv->cv_bitmap.bm_h)} };
 			gr_set_current_canvas(temp_canv);
 			scale_bitmap(sc_bmp[citem-1], vertbuf, 0);
-			gr_set_current_canvas( save_canv );
-			ogl_ubitmapm_cs((grd_curcanv->cv_bitmap.bm_w/2)-FSPACX(THUMBNAIL_W/2),items[0].y-FSPACY(3),FSPACX(THUMBNAIL_W),FSPACY(THUMBNAIL_H),&temp_canv->cv_bitmap,-1,F1_0);
-#endif
+			gr_set_current_canvas(save_canv);
+			gr_bitmap(x, items[0].y - 3, &temp_canv->cv_bitmap);
 			gr_free_canvas(temp_canv);
+#endif
 		}
 		
 		return 1;
@@ -608,12 +647,9 @@ int state_get_savegame_filename(char * fname, char * dsc, char * caption, int bl
 					PHYSFS_read(fp, desc[i], sizeof(char) * DESC_LENGTH, 1);
 					//rpad_string( desc[i], DESC_LENGTH-1 );
 					if (dsc == NULL) m[i+1].type = NM_TYPE_MENU;
-					#ifndef __3DS__
-					// Read thumbnail (3DS skips it: picaGL has no working
-					// glReadPixels, so thumbnails are always blank there).
 					sc_bmp[i] = gr_create_bitmap(THUMBNAIL_W,THUMBNAIL_H );
-					PHYSFS_read(fp, sc_bmp[i]->bm_data, THUMBNAIL_W * THUMBNAIL_H, 1);
-					#endif
+					if (sc_bmp[i] && sc_bmp[i]->bm_data)
+						PHYSFS_read(fp, sc_bmp[i]->bm_data, THUMBNAIL_W * THUMBNAIL_H, 1);
 					nsaves++;
 					valid = 1;
 				}
@@ -771,9 +807,12 @@ int state_save_old_game(int slotnum, char * sg_name, player_rw * sg_player,
 	}
 #else
 	{
-		ubyte color = 0;
-		for ( i=0; i<THUMBNAIL_W*THUMBNAIL_H; i++ )
-			PHYSFS_write(fp, &color, sizeof(ubyte), 1);
+		ubyte thumb[THUMBNAIL_W * THUMBNAIL_H];
+		if (s_gameplay_thumbnail_valid)
+			memcpy(thumb, s_gameplay_thumbnail, THUMBNAIL_W * THUMBNAIL_H);
+		else
+			capture_3ds_thumbnail(thumb);
+		PHYSFS_write(fp, thumb, sizeof(ubyte), THUMBNAIL_W * THUMBNAIL_H);
 	}
 #endif
 
@@ -843,6 +882,11 @@ int state_save_all(int blind_save)
 
 	stop_time();
 
+#ifdef __3DS__
+	if (Game_wind && Game_wind == window_get_front())
+		state_capture_gameplay_thumbnail();
+#endif
+
 	memset(&filename, '\0', PATH_MAX);
 	memset(&desc, '\0', DESC_LENGTH+1);
 	if (!state_get_save_file(filename, desc, blind_save))
@@ -891,6 +935,9 @@ int state_quick_save(void)
 #endif
 
 	stop_time();
+#ifdef __3DS__
+	state_capture_gameplay_thumbnail();
+#endif
 	rval = state_save_all_sub(filename, desc);
 	if (rval)
 		HUD_init_message_literal(HM_DEFAULT, "Game saved (quick)");
@@ -1048,9 +1095,12 @@ int state_save_all_sub(char *filename, char *desc)
 	}
 #else
 	{
-		ubyte color = 0;
-		for ( i=0; i<THUMBNAIL_W*THUMBNAIL_H; i++ )
-			PHYSFS_write(fp, &color, sizeof(ubyte), 1);
+		ubyte thumb[THUMBNAIL_W * THUMBNAIL_H];
+		if (s_gameplay_thumbnail_valid)
+			memcpy(thumb, s_gameplay_thumbnail, THUMBNAIL_W * THUMBNAIL_H);
+		else
+			capture_3ds_thumbnail(thumb);
+		PHYSFS_write(fp, thumb, sizeof(ubyte), THUMBNAIL_W * THUMBNAIL_H);
 	}
 #endif
 
@@ -1681,6 +1731,7 @@ RetryObjectLoading:
 		window_set_visible(Game_wind, 1);
 		window_select(Game_wind);
 	}
+	{ extern void tactical_bottom_init(void); tactical_bottom_init(); }
 #endif
 	reset_time();
 	return 1;

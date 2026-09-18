@@ -793,6 +793,18 @@ void game_render_frame_mono(int flip)
 	if (!overlay_open)
 		gr_flip();
 
+#ifdef __3DS__
+	if (!overlay_open) {
+		extern int tactical_is_active(void);
+		extern void tactical_render_rear_3d(void);
+		extern void tactical_bottom_tick(void);
+		if (tactical_is_active()) {
+			tactical_render_rear_3d();
+			tactical_bottom_tick();
+		}
+	}
+#endif
+
 #ifdef NETWORK
 	if (netplayerinfo_on && Game_mode & GM_MULTI)
 		show_netplayerinfo();
@@ -1024,19 +1036,7 @@ void show_boxed_message(char *msg, int RenderFlag)
 	if (!RenderFlag)
 	{
 #ifdef __3DS__
-		{
-			extern int g_stereo_active;
-			extern int stereo_hw_on;
-			/* pglIsPoweredOff() declared by 3DS GL headers (via ogl_init.h);
-			 * do NOT redeclare (conflicts with header prototype). Bail on
-			 * power-off so fopen() can't data-abort during FS teardown. */
-		}
-		extern void pglSetStereo(bool enable);
-		extern void pglSelectScreen(unsigned display, unsigned side);
-		extern int g_stereo_active;
-		pglSetStereo(false);
-		g_stereo_active = 0;
-		pglSelectScreen(0/*GFX_TOP*/, 0/*GFX_LEFT*/);
+		stereo_suspend();
 #endif
 		gr_flip();
 	}

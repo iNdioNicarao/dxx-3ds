@@ -409,7 +409,12 @@ void kmatrix_view(int network)
 		return;
 	}
 	
+#ifdef __3DS__
+	extern volatile int d1x_powering_off;
+	while (window_exists(wind) && !d1x_powering_off)
+#else
 	while (window_exists(wind))
+#endif
 		event_process();
 	gr_free_bitmap_data(&km->background);
 	d_free(km);

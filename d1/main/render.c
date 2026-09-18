@@ -81,7 +81,9 @@ int g_segs_rendered = 0;   // diagnostic: segments drawn by last render_mine()
 #endif
 
 // (former) "detail level" values
-#ifdef OGL
+#if defined(__3DS__)
+int Render_depth = 40; // 3DS: 40 segments deep (~800 world units) prevents mine-wide over-traversal in large areas
+#elif defined(OGL)
 int Render_depth = MAX_RENDER_SEGS; //how many segments deep to render
 #else
 int Render_depth = 20; //how many segments deep to render
@@ -90,7 +92,11 @@ int Max_perspective_depth = 8; // Deepest segment at which perspective interpola
 int Max_linear_depth = 50; // Deepest segment at which linear interpolation will be used.
 int Max_linear_depth_objects = 20;
 int Simple_model_threshhold_scale = 50; // switch to simpler model when the object has depth greater than this value times its radius.
+#if defined(__3DS__)
+int Max_debris_objects = 6; // 3DS: cap debris objects to prevent physics collision stalls
+#else
 int Max_debris_objects = 15; // How many debris objects to create
+#endif
 
 //used for checking if points have been rotated
 int	Clear_window_color=-1;
@@ -214,7 +220,9 @@ void render_face(int segnum, int sidenum, int nv, int *vp, int tmap1, int tmap2,
 	for (i=0; i<nv; i++) {
 		uvl_copy[i].u = uvlp[i].u;
 		uvl_copy[i].v = uvlp[i].v;
-		dyn_light[i].r = dyn_light[i].g = dyn_light[i].b = uvl_copy[i].l = uvlp[i].l;
+		fix base_l = (uvlp[i].l * 11) / 10;
+		if (base_l > MAX_LIGHT) base_l = MAX_LIGHT;
+		dyn_light[i].r = dyn_light[i].g = dyn_light[i].b = uvl_copy[i].l = base_l;
 		pointlist[i] = &Segment_points[vp[i]];
 	}
 
@@ -352,7 +360,9 @@ void check_face(int segnum, int sidenum, int facenum, int nv, int *vp, int tmap1
 		for (i=0; i<nv; i++) {
 			uvl_copy[i].u = uvlp[i].u;
 			uvl_copy[i].v = uvlp[i].v;
-			dyn_light[i].r = dyn_light[i].g = dyn_light[i].b = uvl_copy[i].l = uvlp[i].l;
+			fix base_l = (uvlp[i].l * 11) / 10;
+			if (base_l > MAX_LIGHT) base_l = MAX_LIGHT;
+			dyn_light[i].r = dyn_light[i].g = dyn_light[i].b = uvl_copy[i].l = base_l;
 			pointlist[i] = &Segment_points[vp[i]];
 		}
 
@@ -1704,6 +1714,7 @@ done_list:
 void render_mine(int start_seg_num,fix eye_offset)
 {
 	int		nn;
+	int		trans_wall_count = 0;
 
 //moved 9/2/98 by Victor Rachels to remove warning/unused var
 	#ifndef NDEBUG
@@ -1901,14 +1912,18 @@ void render_mine(int start_seg_num,fix eye_offset)
 					Automap_visited[segnum]=1;
 
 					for (sn=0; sn<MAX_SIDES_PER_SEGMENT; sn++)
-						if (WALL_IS_DOORWAY(seg,sn) == WID_TRANSPARENT_WALL || WALL_IS_DOORWAY(seg,sn) == WID_TRANSILLUSORY_WALL)
+					{
+						int doorway_type = WALL_IS_DOORWAY(seg,sn);
+						if (doorway_type == WID_TRANSPARENT_WALL || doorway_type == WID_TRANSILLUSORY_WALL)
 						{
+							trans_wall_count++;
 							glAlphaFunc(GL_GEQUAL,0.8);
 							render_side(seg, sn);
 							glAlphaFunc(GL_GEQUAL,0.02);
 						}
 						else
 							render_side(seg, sn);
+					}
 				}
 			}
 			visited[segnum]=255;
@@ -1975,50 +1990,56 @@ void render_mine(int start_seg_num,fix eye_offset)
 		}
 	}
 
-	memset(visited, 0, sizeof(visited[0])*(Highest_segment_index+1));
-	
-	// Third Pass - Render Transculent level geometry with normal Alpha-Func
-	for (nn=N_render_segs;nn--;)
+	// Third Pass - Render Translucent level geometry with normal Alpha-Func
+	// 3DS Performance Optimization:
+	// If Pass 1 detected zero translucent/transparent walls in the rendered segments,
+	// skip Pass 3 completely! This eliminates iterating through all N_render_segs,
+	// rotate_list(8, seg->verts), and 6 side checks per segment on 95%+ of frames.
+	if (trans_wall_count > 0)
 	{
-		int segnum;
-
-		segnum = Render_list[nn];
-		Current_seg_depth = Seg_depth[nn];
-
-		if (segnum!=-1 && (_search_mode || eye_offset>0 || (unsigned char)visited[segnum]!=255))
+		memset(visited, 0, sizeof(visited[0])*(Highest_segment_index+1));
+		for (nn=N_render_segs;nn--;)
 		{
-			//set global render window vars
+			int segnum;
 
-			if (window_check) {
-				Window_clip_left  = render_windows[nn].left;
-				Window_clip_top   = render_windows[nn].top;
-				Window_clip_right = render_windows[nn].right;
-				Window_clip_bot   = render_windows[nn].bot;
-			}
+			segnum = Render_list[nn];
+			Current_seg_depth = Seg_depth[nn];
 
-			// render segment
+			if (segnum!=-1 && (_search_mode || eye_offset>0 || (unsigned char)visited[segnum]!=255))
 			{
-				segment		*seg = &Segments[segnum];
-				g3s_codes 	cc;
-				int			sn;
+				//set global render window vars
 
-				Assert(segnum!=-1 && segnum<=Highest_segment_index);
-
-				cc=rotate_list(8,seg->verts);
-
-				if (! cc.uand) {		//all off screen?
-
-					g_segs_rendered++;   // diagnostic: an OGL segment was drawn
-
-				  if (Viewer->type!=OBJ_ROBOT)
-					Automap_visited[segnum]=1;
-
-					for (sn=0; sn<MAX_SIDES_PER_SEGMENT; sn++)
-						if (WALL_IS_DOORWAY(seg,sn) == WID_TRANSPARENT_WALL || WALL_IS_DOORWAY(seg,sn) == WID_TRANSILLUSORY_WALL)
-							render_side(seg, sn);
+				if (window_check) {
+					Window_clip_left  = render_windows[nn].left;
+					Window_clip_top   = render_windows[nn].top;
+					Window_clip_right = render_windows[nn].right;
+					Window_clip_bot   = render_windows[nn].bot;
 				}
+
+				// render segment
+				{
+					segment		*seg = &Segments[segnum];
+					g3s_codes 	cc;
+					int			sn;
+
+					Assert(segnum!=-1 && segnum<=Highest_segment_index);
+
+					cc=rotate_list(8,seg->verts);
+
+					if (! cc.uand) {		//all off screen?
+
+						g_segs_rendered++;   // diagnostic: an OGL segment was drawn
+
+					  if (Viewer->type!=OBJ_ROBOT)
+						Automap_visited[segnum]=1;
+
+						for (sn=0; sn<MAX_SIDES_PER_SEGMENT; sn++)
+							if (WALL_IS_DOORWAY(seg,sn) == WID_TRANSPARENT_WALL || WALL_IS_DOORWAY(seg,sn) == WID_TRANSILLUSORY_WALL)
+								render_side(seg, sn);
+					}
+				}
+				visited[segnum]=255;
 			}
-			visited[segnum]=255;
 		}
 	}
 #endif

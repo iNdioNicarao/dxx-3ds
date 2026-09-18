@@ -506,6 +506,25 @@ int player_is_visible_from_object(object *objp, vms_vector *pos, fix field_of_vi
 	fix			dot;
 	fvi_query	fq;
 
+	dot = vm_vec_dot(vec_to_player, &objp->orient.fvec);
+
+#if defined(__3DS__)
+	// 3DS Performance Optimization:
+	// For resting/dormant robots, if the player is outside the robot's FOV cone,
+	// do NOT perform an expensive recursive BSP mine raycast (find_vector_intersection).
+	// A resting robot will not wake up anyway unless the player is in its FOV (visibility == 2).
+	if (objp->type == OBJ_ROBOT)
+	{
+		ai_static *aip = &objp->ctype.ai_info;
+		ai_local *ailp = &Ai_local_info[objp - Objects];
+		if (ailp->previous_visibility == 0 && (aip->GOAL_STATE == AIS_REST || aip->CURRENT_STATE == AIS_REST))
+		{
+			if (dot <= field_of_view - (Overall_agitation << 9))
+				return 0;
+		}
+	}
+#endif
+
 	fq.p0						= pos;
 	if ((pos->x != objp->pos.x) || (pos->y != objp->pos.y) || (pos->z != objp->pos.z)) {
 		int	segnum = find_point_seg(pos, objp->segnum);
@@ -530,7 +549,6 @@ int player_is_visible_from_object(object *objp, vms_vector *pos, fix field_of_vi
 	Hit_seg = Hit_data.hit_seg;
 
 	if ((Hit_type == HIT_NONE) || ((Hit_type == HIT_OBJECT) && (Hit_data.hit_object == Players[Player_num].objnum))) {
-		dot = vm_vec_dot(vec_to_player, &objp->orient.fvec);
 		if (dot > field_of_view - (Overall_agitation << 9)) {
 			return 2;
 		} else {
@@ -1274,7 +1292,15 @@ void compute_vis_and_vec(object *objp, vms_vector *pos, ai_local *ailp, vms_vect
 			}
 
 			dist = vm_vec_normalized_dir_quick(vec_to_player, &Ai_cloak_info[cloak_index].last_position, pos);
+#if defined(__3DS__)
+			if (ailp->previous_visibility == 0 && ((d_tick_count + (objp - Objects)) & 1)) {
+				*player_visibility = 0;
+			} else {
+				*player_visibility = player_is_visible_from_object(objp, pos, robptr->field_of_view[Difficulty_level], vec_to_player);
+			}
+#else
 			*player_visibility = player_is_visible_from_object(objp, pos, robptr->field_of_view[Difficulty_level], vec_to_player);
+#endif
 			// *player_visibility = 2;
 
 			if ((ailp->next_misc_sound_time < GameTime64) && (ailp->next_fire < F1_0) && (dist < F1_0*20)) {
@@ -1288,7 +1314,18 @@ void compute_vis_and_vec(object *objp, vms_vector *pos, ai_local *ailp, vms_vect
 				con_printf(CON_DEBUG, "Warning: Player and robot at exactly the same location.\n");
 				vec_to_player->x = F1_0;
 			}
+#if defined(__3DS__)
+			// Stagger line-of-sight checks for dormant robots across alternating frames.
+			// This prevents multiple robots from running expensive BSP raycasts on the exact same frame
+			// when the player enters a room, smoothing CPU frame pacing without altering reaction latency.
+			if (ailp->previous_visibility == 0 && ((d_tick_count + (objp - Objects)) & 1)) {
+				*player_visibility = 0;
+			} else {
+				*player_visibility = player_is_visible_from_object(objp, pos, robptr->field_of_view[Difficulty_level], vec_to_player);
+			}
+#else
 			*player_visibility = player_is_visible_from_object(objp, pos, robptr->field_of_view[Difficulty_level], vec_to_player);
+#endif
 
 			//	This horrible code added by MK in desperation on 12/13/94 to make robots wake up as soon as they
 			//	see you without killing frame rate.

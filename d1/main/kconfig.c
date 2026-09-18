@@ -22,9 +22,47 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <string.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <math.h>
 
 #include "dxxerror.h"
 #include "pstypes.h"
+#ifdef __3DS__
+#include <3ds.h>
+int g_gyro_enabled = 0;
+
+/* Robust auto-calibration state: stationary window filter */
+#define GYRO_CALIB_SAMPLES 32
+static float s_gyro_bias_x = 0.0f;
+static float s_gyro_bias_y = 0.0f;
+static float s_gyro_bias_z = 0.0f;
+static int s_gyro_calibrated = 0;
+static int s_calib_wait = 0;
+static int s_sample_idx = 0;
+static int s_sample_count = 0;
+static int16_t s_samples_x[GYRO_CALIB_SAMPLES];
+static int16_t s_samples_y[GYRO_CALIB_SAMPLES];
+static int16_t s_samples_z[GYRO_CALIB_SAMPLES];
+
+void gyro_reset_calibration(void)
+{
+	/* Warmup delay to ignore finger tap / touchscreen release impact */
+	s_calib_wait = 45;
+	s_sample_count = 0;
+	s_sample_idx = 0;
+}
+
+void gyro_calibrate_now(void)
+{
+	angularRate gyro_rate;
+	hidGyroRead(&gyro_rate);
+	s_gyro_bias_x = (float)gyro_rate.x;
+	s_gyro_bias_y = (float)gyro_rate.y;
+	s_gyro_bias_z = (float)gyro_rate.z;
+	s_gyro_calibrated = 1;
+	s_sample_count = 0;
+	s_sample_idx = 0;
+}
+#endif
 #include "gr.h"
 #include "window.h"
 #include "console.h"
@@ -1444,6 +1482,77 @@ void kconfig_read_controls(d_event *event, int automap_flag)
 			Controls.pitch_time -= (Controls.mouse_axis[kc_mouse[13].value]*PlayerCfg.MouseSens[1])/8;
 		else
 			Controls.pitch_time += (Controls.mouse_axis[kc_mouse[13].value]*PlayerCfg.MouseSens[1])/8;
+#ifdef __3DS__
+		if (g_gyro_enabled) {
+			angularRate gyro_rate;
+			hidGyroRead(&gyro_rate);
+
+			/* Calibration: accumulate samples only when not touching screen and past warmup */
+			if (s_calib_wait > 0) {
+				s_calib_wait--;
+			} else if ((hidKeysHeld() & KEY_TOUCH) == 0) {
+				s_samples_x[s_sample_idx] = gyro_rate.x;
+				s_samples_y[s_sample_idx] = gyro_rate.y;
+				s_samples_z[s_sample_idx] = gyro_rate.z;
+				s_sample_idx = (s_sample_idx + 1) % GYRO_CALIB_SAMPLES;
+				if (s_sample_count < GYRO_CALIB_SAMPLES)
+					s_sample_count++;
+
+				if (s_sample_count >= GYRO_CALIB_SAMPLES) {
+					int16_t min_x = s_samples_x[0], max_x = s_samples_x[0];
+					int16_t min_y = s_samples_y[0], max_y = s_samples_y[0];
+					int16_t min_z = s_samples_z[0], max_z = s_samples_z[0];
+					int32_t sum_x = 0, sum_y = 0, sum_z = 0;
+					int k;
+					for (k = 0; k < GYRO_CALIB_SAMPLES; k++) {
+						if (s_samples_x[k] < min_x) min_x = s_samples_x[k];
+						if (s_samples_x[k] > max_x) max_x = s_samples_x[k];
+						if (s_samples_y[k] < min_y) min_y = s_samples_y[k];
+						if (s_samples_y[k] > max_y) max_y = s_samples_y[k];
+						if (s_samples_z[k] < min_z) min_z = s_samples_z[k];
+						if (s_samples_z[k] > max_z) max_z = s_samples_z[k];
+						sum_x += s_samples_x[k];
+						sum_y += s_samples_y[k];
+						sum_z += s_samples_z[k];
+					}
+					/* Only calibrate when console is stationary across all 3 axes */
+					if ((max_x - min_x) < 40 && (max_y - min_y) < 40 && (max_z - min_z) < 40) {
+						float avg_x = (float)sum_x / (float)GYRO_CALIB_SAMPLES;
+						float avg_y = (float)sum_y / (float)GYRO_CALIB_SAMPLES;
+						float avg_z = (float)sum_z / (float)GYRO_CALIB_SAMPLES;
+						if (!s_gyro_calibrated) {
+							s_gyro_bias_x = avg_x;
+							s_gyro_bias_y = avg_y;
+							s_gyro_bias_z = avg_z;
+							s_gyro_calibrated = 1;
+						} else {
+							s_gyro_bias_x = s_gyro_bias_x * 0.95f + avg_x * 0.05f;
+							s_gyro_bias_y = s_gyro_bias_y * 0.95f + avg_y * 0.05f;
+							s_gyro_bias_z = s_gyro_bias_z * 0.95f + avg_z * 0.05f;
+						}
+					}
+				}
+			} else {
+				/* Screen touch resets buffer to ensure tap dynamics never affect bias */
+				s_sample_count = 0;
+			}
+
+			// 3DS gyro X axis corresponds to the physical hinge axis (tilting up/down).
+			// Tilting top of 3DS away/up produces negative gx -> decreases pitch_time (aims UP).
+			// Tilting top of 3DS toward/down produces positive gx -> increases pitch_time (aims DOWN).
+			int gx = (int)roundf((float)gyro_rate.x - s_gyro_bias_x);
+			int pitch_deadband = 25 + PlayerCfg.GyroDeadzone * 5; /* default 8 -> 65 */
+			if (pitch_deadband < 15) pitch_deadband = 15;
+			if (abs(gx) < pitch_deadband) {
+				gx = 0;
+			}
+			if (gx != 0) {
+				int sens = (PlayerCfg.GyroSensitivity > 0) ? PlayerCfg.GyroSensitivity : 8;
+				fix gyro_p = (fix)(((int64_t)gx * FrameTime * sens) / (1200 * 8));
+				Controls.pitch_time += gyro_p;
+			}
+		}
+#endif
 	}
 
 	//----------- Read vertical_thrust_time -----------------
@@ -1536,6 +1645,28 @@ void kconfig_read_controls(d_event *event, int automap_flag)
 			Controls.heading_time += (Controls.mouse_axis[kc_mouse[15].value]*PlayerCfg.MouseSens[0])/8;
 		else
 			Controls.heading_time -= (Controls.mouse_axis[kc_mouse[15].value]*PlayerCfg.MouseSens[0])/8;
+#ifdef __3DS__
+		if (g_gyro_enabled) {
+			angularRate gyro_rate;
+			hidGyroRead(&gyro_rate);
+			// 3DS gyro: turning right produces negative rate on both Y (vertical axis)
+			// and Z (depth axis). Inverting and combining them provides natural,
+			// unified yaw response whether the console is held upright or angled at 45°.
+			int adj_y = (int)roundf((float)gyro_rate.y - s_gyro_bias_y);
+			int adj_z = (int)roundf((float)gyro_rate.z - s_gyro_bias_z);
+			int gh = -(adj_y + adj_z);
+			int head_deadband = 15 + (PlayerCfg.GyroDeadzone * 10) / 8; /* default 8 -> 25 */
+			if (head_deadband < 10) head_deadband = 10;
+			if (abs(gh) < head_deadband) {
+				gh = 0;
+			}
+			if (gh != 0) {
+				int sens = (PlayerCfg.GyroSensitivity > 0) ? PlayerCfg.GyroSensitivity : 8;
+				fix gyro_h = (fix)(((int64_t)gh * FrameTime * sens) / (1400 * 8));
+				Controls.heading_time += gyro_h;
+			}
+		}
+#endif
 	}
 
 	//----------- Read sideways_thrust_time -----------------

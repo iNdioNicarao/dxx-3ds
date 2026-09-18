@@ -44,6 +44,7 @@ bs_mode_t bottom_get_mode(void);
 /* Glyph / primitive API (RGB565-aware). Implemented in bottom_screen.c. */
 void bottom_clear(uint16_t rgb565);
 void bottom_print(int x, int y, const char *s, uint16_t rgb565);
+void bottom_print_clipped(int x, int y, const char *s, uint16_t rgb565, int bx, int by, int bw, int bh);
 void bottom_fill_rect(int x, int y, int w, int h, uint16_t rgb565);
 void bottom_get_dims(int *w, int *h);
 
@@ -104,12 +105,23 @@ void bottom_scores_rst_reset(void);
  * reset() clears dirty-state for the next game frame. */
 int bottom_hud_tapped(void);
 void bottom_hud_reset(void);
-/* Stereo separation is set by the 3DS hardware depth slider (PARALLEL only);
- * the on-screen +/- buttons were removed. */
+/* In-game top-row GYRO toggle button (3DS only), drawn next to the HUD button.
+ * Returns 1 on a fresh tap; caller toggles gyro aim assist on/off.
+ * enabled: 1 = active (drawn green), 0 = inactive (drawn grey).
+ * reset() clears dirty-state for the next game frame. */
+int bottom_gyro_tapped(int enabled);
+void bottom_gyro_reset(void);
+/* In-game weapon cycle buttons (PRI, SEC). */
+int bottom_pri_tapped(void);
+void bottom_pri_reset(void);
+int bottom_sec_tapped(void);
+void bottom_sec_reset(void);
 
 /* Always-on automap minimap (3DS): composite the 6DOF automap canvas into a
  * bottom-screen region. dx,dy,dw,dh are logical bottom-screen coords. */
 void bottom_blit_canvas_region(grs_bitmap *src, int dx, int dy, int dw, int dh);
+/* Blit 3D rendered rear-view mirror from linear buffer into bottom screen framebuffer */
+void bottom_copy_rear_view(const uint16_t *src, int mx, int my, int mw, int mh);
 /* Clear a logical bottom-screen rectangle (e.g. the minimap area) to black. */
 void bottom_clear_rect(int x, int y, int w, int h);
 /* Bresenham line into the bottom buffer (logical coords). Software minimap
@@ -120,6 +132,11 @@ void bottom_draw_line(int x0, int y0, int x1, int y1, uint16_t c,
 /* Rectangle outline (logical coords), clipped to (cx,cy,cw,ch). */
 void bottom_draw_rect(int x, int y, int w, int h, uint16_t c,
 			int cx, int cy, int cw, int ch);
+/* Set a single pixel in logical coords. */
+void bottom_set_pixel(int x, int y, uint16_t c);
+/* Circle outline (logical coords), clipped to (bx,by,bw,bh). */
+void bottom_draw_circle(int cx, int cy, int r, uint16_t c,
+			int bx, int by, int bw, int bh);
 
 /* Draw a string using the real Descent game font (GAME_FONT) into the bottom
  * buffer (3DS only). Falls back to nothing if the font isn't loaded yet.

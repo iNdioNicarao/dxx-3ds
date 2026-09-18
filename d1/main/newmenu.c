@@ -472,8 +472,16 @@ int newmenu_do2( char * title, char * subtitle, int nitems, newmenu_item * item,
 
 	// newmenu_do2 and simpler get their own event loop
 	// This is so the caller doesn't have to provide a callback that responds to EVENT_NEWMENU_SELECTED
+#ifdef __3DS__
+	while (window_exists(wind) && !d1x_powering_off)
+	{
+		event_process();
+		bottom_screen_present();
+	}
+#else
 	while (window_exists(wind))
 		event_process();
+#endif
 
 	return rval;
 }
@@ -495,8 +503,16 @@ int newmenu_doreorder( char * title, char * subtitle, int nitems, newmenu_item *
 
 	// newmenu_do2 and simpler get their own event loop
 	// This is so the caller doesn't have to provide a callback that responds to EVENT_NEWMENU_SELECTED
+#ifdef __3DS__
+	while (window_exists(wind) && !d1x_powering_off)
+	{
+		event_process();
+		bottom_screen_present();
+	}
+#else
 	while (window_exists(wind))
 		event_process();
+#endif
 
 	return rval;
 }

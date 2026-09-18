@@ -96,6 +96,12 @@ object *object_create_explosion_sub(object *objp, short segnum, vms_vector * pos
 					parent_check = 1;
 
 			if ( (obj0p->type == OBJ_CNTRLCEN) || (obj0p->type==OBJ_PLAYER) || ((obj0p->type==OBJ_ROBOT) && parent_check)) {
+#if defined(__3DS__)
+				if (abs(obj0p->pos.x - obj->pos.x) >= maxdistance ||
+				    abs(obj0p->pos.y - obj->pos.y) >= maxdistance ||
+				    abs(obj0p->pos.z - obj->pos.z) >= maxdistance)
+					continue;
+#endif
 				dist = vm_vec_dist_quick( &obj0p->pos, &obj->pos );
 				// Make damage be from 'maxdamage' to 0.0, where 0.0 is 'maxdistance' away;
 				if ( dist < maxdistance ) {

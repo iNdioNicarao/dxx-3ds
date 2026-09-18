@@ -132,10 +132,18 @@ void digi_get_sound_loc( vms_matrix * listener, vms_vector * listener_pos, int l
 		int num_search_segs = f2i(max_distance/20);
 		if ( num_search_segs < 1 ) num_search_segs = 1;
 
+#if defined(__3DS__)
+		// 3DS Performance Optimization:
+		// Avoid running expensive recursive BFS mine graph pathfinding (find_connected_distance)
+		// for every active 3D sound on every single frame (e.g. door opening, explosions, ambient).
+		// Direct Euclidean distance provides smooth, instant attenuation without CPU stalls.
+		path_distance = distance;
+#else
 		if (Game_mode & GM_OBSERVER)
 			path_distance = vm_vec_dist(listener_pos, sound_pos);
 		else
 			path_distance = find_connected_distance(listener_pos, listener_seg, sound_pos, sound_seg, num_search_segs, WID_RENDPAST_FLAG+WID_FLY_FLAG );
+#endif
 		
 		if ( path_distance > -1 )	{
 			*volume = max_volume - fixdiv(path_distance,max_distance);

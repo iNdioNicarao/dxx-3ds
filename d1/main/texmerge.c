@@ -31,10 +31,8 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 //resending textures into video ram is very slow, so cache more (worst case, the ogl driver will swap out some itself, probably doing a better job) -MM
 #ifdef OGL
 #include "ogl_init.h"
-#define MAX_NUM_CACHE_BITMAPS 200
-#else
-#define MAX_NUM_CACHE_BITMAPS 50
 #endif
+#include "texmerge.h"
 
 void merge_textures_new( int type, grs_bitmap * bottom_bmp, grs_bitmap * top_bmp, ubyte * dest_data );
 void merge_textures_super_xparent( int type, grs_bitmap * bottom_bmp, grs_bitmap * top_bmp, ubyte * dest_data );

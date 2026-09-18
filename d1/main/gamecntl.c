@@ -1254,8 +1254,9 @@ void do_cheat_menu()
 	mm[9].type=NM_TYPE_RADIO; mm[9].value=(Players[Player_num].laser_level==2); mm[9].group=0; mm[9].text="Laser level 3";
 	mm[10].type=NM_TYPE_RADIO; mm[10].value=(Players[Player_num].laser_level==3); mm[10].group=0; mm[10].text="Laser level 4";
 	mm[11].type=NM_TYPE_NUMBER; mm[11].value=Players[Player_num].secondary_ammo[CONCUSSION_INDEX]; mm[11].text="Missiles"; mm[11].min_value=0; mm[11].max_value=200;
+	mm[12].type=NM_TYPE_CHECK; mm[12].value=(ConsoleObject && ConsoleObject->control_type == CT_SLEW); mm[12].text="Free-Cam (Slew Mode)";
 
-	mmn = newmenu_do("Wimp Menu",NULL,12, mm, NULL, NULL );
+	mmn = newmenu_do("Wimp Menu",NULL,13, mm, NULL, NULL );
 
 	/* Apply on close. On 3DS the menu is dismissed with B/back, which leaves
 	 * newmenu_do's rval at -1 (no explicit item select). The Wimp/cheat menu
@@ -1290,6 +1291,19 @@ void do_cheat_menu()
 		if (mm[9].value) Players[Player_num].laser_level=2;
 		if (mm[10].value) Players[Player_num].laser_level=3;
 		Players[Player_num].secondary_ammo[CONCUSSION_INDEX] = mm[11].value;
+
+		if (ConsoleObject) {
+			if (mm[12].value) {
+				if (ConsoleObject->control_type != CT_SLEW)
+					slew_init(ConsoleObject);
+			} else {
+				if (ConsoleObject->control_type == CT_SLEW) {
+					ConsoleObject->control_type = CT_FLYING;
+					ConsoleObject->movement_type = MT_PHYSICS;
+				}
+			}
+		}
+
 		init_gauges();
 	}
 }

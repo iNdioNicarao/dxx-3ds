@@ -583,7 +583,7 @@ void ogl_font_choose_size(grs_font * font,int gap,int *rw,int *rh){
 
 void ogl_init_font(grs_font * font)
 {
-	int oglflags = OGL_FLAG_ALPHA;
+	int oglflags = OGL_FLAG_ALPHA | OGL_FLAG_FONT;
 	int	nchars = font->ft_maxchar-font->ft_minchar+1;
 	int i,w,h,tw,th,x,y,curx=0,cury=0;
 	unsigned char *fp;
@@ -595,6 +595,7 @@ void ogl_init_font(grs_font * font)
 	memset(data, TRANSPARENCY_COLOR, tw * th); // map the whole data with transparency so we won't have borders if using gap
 	gr_init_bitmap(&font->ft_parent_bitmap,BM_LINEAR,0,0,tw,th,tw,data);
 	gr_set_transparent(&font->ft_parent_bitmap, 1);
+	font->ft_parent_bitmap.bm_flags |= BM_FLAG_FONT;
 
 	if (!(font->ft_flags & FT_COLOR))
 		oglflags |= OGL_FLAG_NOCOLOR;
@@ -683,7 +684,7 @@ void ogl_init_font(grs_font * font)
 		gr_init_sub_bitmap(&font->ft_bitmaps[i],&font->ft_parent_bitmap,curx,cury,w,h);
 		curx+=w+gap;
 	}
-	ogl_loadbmtexture_f(&font->ft_parent_bitmap, GameCfg.TexFilt);
+	ogl_loadbmtexture_f(&font->ft_parent_bitmap, 0);
 }
 
 int ogl_internal_string(int x, int y, const char *s )

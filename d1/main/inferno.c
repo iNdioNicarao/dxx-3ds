@@ -34,7 +34,7 @@ char copyright[] = "DESCENT   COPYRIGHT (C) 1994,1995 PARALLAX SOFTWARE CORPORAT
 #ifdef __3DS__
 #include <3ds.h>
 #include "bottom_screen.h"
-extern int d1x_powering_off;
+extern volatile int d1x_powering_off;
 extern void pglSetPoweredOff(void);
 
 const unsigned int __stacksize__ = 8 * 1024 * 1024; // 8MB
@@ -312,11 +312,10 @@ int main(int argc, char *argv[])
 	 * laid out at 720 bytes/row while reporting width 240. Writing u16
 	 * pixels at idx=y*240+x then lands 720-stride rows -> triplicated +
 	 * mirrored + strobing garbage (the bug seen for many builds).
-	 * Instead, init the bottom as genuine RGB565 from the start so the
-	 * framebuffer is allocated at the 480-byte/row (width 240, 2B/px) stride
-	 * our raw blitter expects. Top stays RGB565 too (picaGL is fine with it).
-	 * See bottom_screen.c. */
-	gfxInit(GSP_RGB565_OES, GSP_RGB565_OES, false);
+	/* Top screen is GSP_BGR8_OES (24-bit true color) to eliminate color
+	 * banding in dark mine tunnels; bottom screen is genuine RGB565 for the
+	 * raw software blitter. Double-buffering is off on bottom (flush-only). */
+	gfxInit(GSP_BGR8_OES, GSP_RGB565_OES, false);
 	/* Bottom screen is owned by bottom_screen.c (raw RGB565 blitter), not
 	 * libctru's PrintConsole. Set the bottom SINGLE-BUFFERED: there is then
 	 * exactly one framebuffer, so gfxFlushBuffers() shows it with no swap.
@@ -457,7 +456,7 @@ int main(int argc, char *argv[])
 		return(0);
 
 	con_printf( CON_DEBUG, "\nInitializing texture caching system..." );
-	texmerge_init( 10 );		// 10 cache bitmaps
+	texmerge_init( MAX_NUM_CACHE_BITMAPS );		// 500 cache bitmaps (prevents mid-game thrashing in animated rooms)
 
 	con_printf( CON_DEBUG, "\nRunning game...\n" );
 	init_game();

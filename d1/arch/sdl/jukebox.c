@@ -1,6 +1,6 @@
 /*
- * DXX Rebirth "jukebox" code
- * MD 2211 <md2211@users.sourceforge.net>, 2007
+ * D1X 3DS Roland SC-55 Soundtrack Jukebox
+ * Author: Dennis Isaac Gutierrez Zeledon (Dennis)
  */
 
 #include <stdlib.h>
@@ -9,288 +9,446 @@
 
 #include "physfsx.h"
 #include "args.h"
-#include "dl_list.h"
 #include "hudmsg.h"
 #include "songs.h"
+#include "digi_mixer_music.h"
 #include "jukebox.h"
 #include "dxxerror.h"
 #include "console.h"
 #include "config.h"
+#include "window.h"
+#include "game.h"
+#include "maths.h"
 
-#define MUSIC_HUDMSG_MAXLEN 40
-#define JUKEBOX_HUDMSG_PLAYING "Now playing:"
-#define JUKEBOX_HUDMSG_STOPPED "Jukebox stopped"
-
-typedef struct jukebox_songs
-{
-	char **list;	// the actual list
-	char *list_buf;	// buffer containing song file path text
-	int num_songs;	// number of jukebox songs
-	int max_songs;	// maximum number of pointers that 'list' can hold, i.e. size of list / size of one pointer
-	int max_buf;	// size of list_buf
-} jukebox_songs;
-
-static jukebox_songs JukeboxSongs = { NULL, NULL, 0, 0, 0 };
-char hud_msg_buf[MUSIC_HUDMSG_MAXLEN+4];
-
-
-void jukebox_unload()
-{
-	if (JukeboxSongs.list_buf)
-	{
-		d_free(JukeboxSongs.list_buf);
-		
-		if (JukeboxSongs.list)
-			d_free(JukeboxSongs.list);
-	}
-	else if (JukeboxSongs.list)
-	{
-		PHYSFS_freeList(JukeboxSongs.list);
-		JukeboxSongs.list = NULL;
-	}
-
-	JukeboxSongs.num_songs = JukeboxSongs.max_songs = JukeboxSongs.max_buf = 0;
-}
+const jukebox_track_info_t sc55_catalog[JUKEBOX_TOTAL_TRACKS] = {
+	{ "01. Title (Descent)",              "descent"  },
+	{ "02. Briefing",                     "briefing" },
+	{ "03. Level 01: Lunar Outpost",      "game01"   },
+	{ "04. Level 02: Lunar Sci-Lab",      "game02"   },
+	{ "05. Level 03: Military Outpost",   "game03"   },
+	{ "06. Level 04: Venus Atmospheric",  "game04"   },
+	{ "07. Level 05: Venus Nickel-Iron",  "game05"   },
+	{ "08. Level 06: Mercury Solar Lab",  "game06"   },
+	{ "09. Level 07: Mercury Core",       "game07"   },
+	{ "10. Level 08: Mars Processing",    "game08"   },
+	{ "11. Level 09: Mars Military",      "game09"   },
+	{ "12. Level 10: Mars Prison",        "game10"   },
+	{ "13. Level 11: Callisto Tower",     "game11"   },
+	{ "14. Level 12: Europa Mining",      "game12"   },
+	{ "15. Level 13: Europa CO2 Mine",    "game13"   },
+	{ "16. Level 14: Europa Sub-Surface", "game14"   },
+	{ "17. Level 15: Ganymede Center",    "game15"   },
+	{ "18. Level 16: Ganymede Ore",       "game16"   },
+	{ "19. Level 17: Titan Mine",         "game17"   },
+	{ "20. Level 18: Titan Nitrogen",     "game18"   },
+	{ "21. Level 19: Hyperion Military",  "game19"   },
+	{ "22. Level 20: Tethys H2O Mine",    "game20"   },
+	{ "23. Level 21: Miranda Mine",       "game21"   },
+	{ "24. Level 22: Oberon Platinum",    "game22"   },
+	{ "25. Reactor Escape",               "endlevel" },
+	{ "26. Victory (Endgame)",            "endgame"  },
+	{ "27. Credits",                      "credits"  }
+};
 
 const char *const jukebox_exts[] = { SONG_EXT_HMP, SONG_EXT_MID, SONG_EXT_OGG, SONG_EXT_FLAC, SONG_EXT_MP3, NULL };
 
-int read_m3u(void)
+static const char *const s_jukebox_folders[] = {
+	"soundtrack",
+	"mp3",
+	"ogg",
+	"wav",
+	""
+};
+
+static const char *const s_jukebox_extensions[] = {
+	".mp3",
+	".ogg",
+	".wav",
+	".hmp"
+};
+
+static int s_jukebox_current_track = 0;
+static int s_jukebox_state = JUKEBOX_STATE_STOPPED;
+static int s_jukebox_mode = JUKEBOX_MODE_LOOP;
+static int s_jukebox_active = 0;
+static volatile int s_jukebox_track_finished = 0;
+static int s_jukebox_preloaded_track = -1;
+
+static void jukebox_hook_finished(void);
+
+static int jukebox_resolve_track_path(int track_idx, char *out_path, size_t out_len)
 {
-	FILE *fp;
-	int length;
-	char *buf;
-	char *abspath;
-	
-	MALLOC(abspath, char, PATH_MAX);
-	if (!abspath)
+	int f, e, b;
+	char test_path[PATH_MAX];
+	const char *base;
+	char alt_base[16];
+	const char *bases[2];
+	int num_bases = 1;
+
+	if (track_idx < 0 || track_idx >= JUKEBOX_TOTAL_TRACKS)
 		return 0;
-	
-	if (PHYSFSX_exists(GameCfg.CMLevelMusicPath,0)) // it's a child of Sharepath, build full path
-		PHYSFSX_getRealPath(GameCfg.CMLevelMusicPath, abspath);
-	else
+
+	base = sc55_catalog[track_idx].basename;
+	bases[0] = base;
+
+	// Also support non-padded level track names (e.g. "game1.mp3" instead of "game01.mp3")
+	if (strncmp(base, "game0", 5) == 0 && base[5] >= '1' && base[5] <= '9')
 	{
-		strncpy(abspath, GameCfg.CMLevelMusicPath, PATH_MAX - 1);
-		abspath[PATH_MAX - 1] = '\0';
-	}
-	
-	fp = fopen(abspath, "rb");
-	d_free(abspath);
-	if (!fp)
-		return 0;
-	
-	fseek( fp, -1, SEEK_END );
-	length = ftell(fp) + 1;
-	MALLOC(JukeboxSongs.list_buf, char, length + 1);
-	if (!JukeboxSongs.list_buf)
-	{
-		fclose(fp);
-		return 0;
+		snprintf(alt_base, sizeof(alt_base), "game%c", base[5]);
+		bases[1] = alt_base;
+		num_bases = 2;
 	}
 
-	fseek(fp, 0, SEEK_SET);
-	if (!fread(JukeboxSongs.list_buf, length, 1, fp))
+	for (f = 0; f < (int)(sizeof(s_jukebox_folders) / sizeof(s_jukebox_folders[0])); f++)
 	{
-		d_free(JukeboxSongs.list_buf);
-		fclose(fp);
-		return 0;
-	}
-
-	fclose(fp);		// Finished with it
-
-	// The growing string list is allocated last, hopefully reducing memory fragmentation when it grows
-	MALLOC(JukeboxSongs.list, char *, 1024);
-	if (!JukeboxSongs.list)
-	{
-		d_free(JukeboxSongs.list_buf);
-		return 0;
-	}
-	JukeboxSongs.max_songs = 1024;
-
-	JukeboxSongs.list_buf[length] = '\0';	// make sure the last string is terminated
-	JukeboxSongs.max_buf = length + 1;
-	buf = JukeboxSongs.list_buf;
-	
-	while (buf < JukeboxSongs.list_buf + length - 1)
-	{
-		while (*buf == 0 || *buf == 10 || *buf == 13)	// find new line - support DOS, Unix and Mac line endings
-			buf++;
-		
-		if (*buf != '#')	// ignore comments / extra info
+		for (b = 0; b < num_bases; b++)
 		{
-			if (JukeboxSongs.num_songs >= JukeboxSongs.max_songs)
+			for (e = 0; e < (int)(sizeof(s_jukebox_extensions) / sizeof(s_jukebox_extensions[0])); e++)
 			{
-				char **new_list = d_realloc(JukeboxSongs.list, JukeboxSongs.max_buf*sizeof(char *)*MEM_K);
-				if (new_list == NULL)
-					break;
-				JukeboxSongs.max_buf *= MEM_K;
-				JukeboxSongs.list = new_list;
+				if (s_jukebox_folders[f][0] != '\0')
+					snprintf(test_path, sizeof(test_path), "%s/%s%s", s_jukebox_folders[f], bases[b], s_jukebox_extensions[e]);
+				else
+					snprintf(test_path, sizeof(test_path), "%s%s", bases[b], s_jukebox_extensions[e]);
+
+				if (PHYSFSX_exists(test_path, 1))
+				{
+					strncpy(out_path, test_path, out_len - 1);
+					out_path[out_len - 1] = '\0';
+					return 1;
+				}
 			}
-			
-			JukeboxSongs.list[JukeboxSongs.num_songs++] = buf;
 		}
-		
-		while (*buf != 0 && *buf != 10 && *buf != 13)	// find end of line
-			buf++;
-		
-		*buf = 0;
 	}
-	
-	return 1;
+
+	// Default fallback path for loader lookup
+	snprintf(out_path, out_len, "soundtrack/%s.mp3", base);
+	return 0;
 }
 
-/* Loads music file names from a given directory or M3U playlist */
-void jukebox_load()
+static void jukebox_hook_finished(void)
 {
-	static int jukebox_init = 1;
+	/* Audio callback from SDL_mixer running on audio thread:
+	 * ONLY set the atomic notification flag. All file I/O, buffer allocations,
+	 * and state transitions are deferred to jukebox_poll() on the main thread. */
+	s_jukebox_track_finished = 1;
+}
 
-	// initialize JukeboxSongs structure once per runtime
-	if (jukebox_init)
+void jukebox_poll(void)
+{
+	if (!s_jukebox_track_finished)
+		return;
+
+	s_jukebox_track_finished = 0;
+
+	if (!s_jukebox_active || s_jukebox_state != JUKEBOX_STATE_PLAYING)
+		return;
+
+	switch (s_jukebox_mode)
 	{
-		JukeboxSongs.list = NULL;
-		JukeboxSongs.num_songs = JukeboxSongs.max_songs = JukeboxSongs.max_buf = 0;
-		jukebox_init = 0;
+		case JUKEBOX_MODE_LOOP:
+			jukebox_play_track(s_jukebox_current_track);
+			break;
+
+		case JUKEBOX_MODE_SEQUENTIAL:
+		case JUKEBOX_MODE_SHUFFLE:
+			jukebox_next();
+			break;
 	}
+}
 
-	jukebox_unload();
+int jukebox_play_track(int track_idx)
+{
+	char resolved[PATH_MAX];
 
-	// Check if it's an M3U file
-	if (!d_stricmp(&GameCfg.CMLevelMusicPath[strlen(GameCfg.CMLevelMusicPath) - 4], ".m3u"))
-		read_m3u();
-	else	// a directory
+	if (track_idx < 0 || track_idx >= JUKEBOX_TOTAL_TRACKS)
+		return 0;
+
+	s_jukebox_current_track = track_idx;
+	s_jukebox_track_finished = 0;
+
+	GameCfg.MusicType = MUSIC_TYPE_CUSTOM;
+
+	jukebox_resolve_track_path(track_idx, resolved, sizeof(resolved));
+
+	int loop = (s_jukebox_mode == JUKEBOX_MODE_LOOP) ? 1 : 0;
+
+	if (songs_play_file(resolved, loop, (loop ? NULL : jukebox_hook_finished)))
 	{
-		int new_path = 0;
-		char *p;
-		const char *sep = PHYSFS_getDirSeparator();
-		int i;
+		s_jukebox_state = JUKEBOX_STATE_PLAYING;
+		s_jukebox_active = 1;
 
-		// stick a separator on the end if necessary.
-		if (strlen(GameCfg.CMLevelMusicPath) >= strlen(sep))
+		if (Game_wind != NULL)
 		{
-			p = GameCfg.CMLevelMusicPath + strlen(GameCfg.CMLevelMusicPath) - strlen(sep);
-			if (strcmp(p, sep))
-				strncat(GameCfg.CMLevelMusicPath, sep, PATH_MAX - 1 - strlen(GameCfg.CMLevelMusicPath));
+			HUD_init_message(HM_DEFAULT, "Jukebox: %s", sc55_catalog[track_idx].title);
 		}
+		con_printf(CON_DEBUG, "Jukebox playing: %s (%s)\n", sc55_catalog[track_idx].title, resolved);
 
-		// Read directory using PhysicsFS
-		if (PHYSFS_isDirectory(GameCfg.CMLevelMusicPath))	// find files in relative directory
-			JukeboxSongs.list = PHYSFSX_findFiles(GameCfg.CMLevelMusicPath, jukebox_exts);
+#ifdef __3DS__
+		// Preload next track in background for seamless zero-stutter playback
+		if (s_jukebox_mode != JUKEBOX_MODE_LOOP)
+		{
+			int upcoming = track_idx;
+			if (s_jukebox_mode == JUKEBOX_MODE_SEQUENTIAL)
+			{
+				upcoming = (track_idx + 1) % JUKEBOX_TOTAL_TRACKS;
+			}
+			else if (s_jukebox_mode == JUKEBOX_MODE_SHUFFLE)
+			{
+				int attempts = 10;
+				while (attempts-- > 0 && upcoming == track_idx)
+				{
+					upcoming = d_rand() % JUKEBOX_TOTAL_TRACKS;
+				}
+			}
+			s_jukebox_preloaded_track = upcoming;
+			char next_path[PATH_MAX];
+			jukebox_resolve_track_path(upcoming, next_path, sizeof(next_path));
+			digi_mixer_music_preload(next_path);
+		}
 		else
 		{
-			new_path = PHYSFSX_isNewPath(GameCfg.CMLevelMusicPath);
-			PHYSFS_addToSearchPath(GameCfg.CMLevelMusicPath, 0);
-
-			// as mountpoints are no option (yet), make sure only files originating from GameCfg.CMLevelMusicPath are aded to the list.
-			JukeboxSongs.list = PHYSFSX_findabsoluteFiles("", GameCfg.CMLevelMusicPath, jukebox_exts);
+			s_jukebox_preloaded_track = -1;
 		}
-
-		if (!JukeboxSongs.list)
-		{
-			if (new_path)
-				PHYSFS_removeFromSearchPath(GameCfg.CMLevelMusicPath);
-			return;
-		}
-		
-		for (i = 0; JukeboxSongs.list[i]; i++) {}
-		JukeboxSongs.num_songs = i;
-
-		if (new_path)
-			PHYSFS_removeFromSearchPath(GameCfg.CMLevelMusicPath);
-	}
-
-	if (JukeboxSongs.num_songs)
-	{
-		con_printf(CON_DEBUG,"Jukebox: %d music file(s) found in %s\n", JukeboxSongs.num_songs, GameCfg.CMLevelMusicPath);
-		if (GameCfg.CMLevelMusicTrack[1] != JukeboxSongs.num_songs)
-		{
-			GameCfg.CMLevelMusicTrack[1] = JukeboxSongs.num_songs;
-			GameCfg.CMLevelMusicTrack[0] = 0; // number of songs changed so start from beginning.
-		}
+#endif
+		return 1;
 	}
 	else
 	{
-		GameCfg.CMLevelMusicTrack[0] = -1;
-		GameCfg.CMLevelMusicTrack[1] = -1;
-		con_printf(CON_DEBUG,"Jukebox music could not be found!\n");
+		char fallback[64];
+		snprintf(fallback, sizeof(fallback), "%s.mp3", sc55_catalog[track_idx].basename);
+		if (songs_play_file(fallback, loop, (loop ? NULL : jukebox_hook_finished)))
+		{
+			s_jukebox_state = JUKEBOX_STATE_PLAYING;
+			s_jukebox_active = 1;
+			if (Game_wind != NULL)
+			{
+				HUD_init_message(HM_DEFAULT, "Jukebox: %s", sc55_catalog[track_idx].title);
+			}
+			return 1;
+		}
 	}
+
+	s_jukebox_state = JUKEBOX_STATE_STOPPED;
+	s_jukebox_active = 0;
+	return 0;
 }
 
-// To proceed tru our playlist. Usually used for continous play, but can loop as well.
-void jukebox_hook_next()
+int jukebox_play_game_track(int track_idx, int repeat)
 {
-	if (!JukeboxSongs.list || GameCfg.CMLevelMusicTrack[0] == -1) return;
+	char resolved[PATH_MAX];
 
-	if (GameCfg.CMLevelMusicPlayOrder == MUSIC_CM_PLAYORDER_RAND)
-		GameCfg.CMLevelMusicTrack[0] = d_rand() % GameCfg.CMLevelMusicTrack[1]; // simply a random selection - no check if this song has already been played. But that's how I roll!
-	else
-		GameCfg.CMLevelMusicTrack[0]++;
-	if (GameCfg.CMLevelMusicTrack[0] + 1 > GameCfg.CMLevelMusicTrack[1])
-		GameCfg.CMLevelMusicTrack[0] = 0;
-
-	jukebox_play();
-}
-
-// Play tracks from Jukebox directory. Play track specified in GameCfg.CMLevelMusicTrack[0] and loop depending on GameCfg.CMLevelMusicPlayOrder
-int jukebox_play()
-{
-	char *music_filename, *full_filename;
-	unsigned long size_full_filename = 0;
-
-	if (!JukeboxSongs.list)
+	if (track_idx < 0 || track_idx >= JUKEBOX_TOTAL_TRACKS)
 		return 0;
 
-	if (GameCfg.CMLevelMusicTrack[0] < 0 || GameCfg.CMLevelMusicTrack[0] + 1 > GameCfg.CMLevelMusicTrack[1])
-		return 0;
+	s_jukebox_current_track = track_idx;
+	s_jukebox_track_finished = 0;
 
-	music_filename = JukeboxSongs.list[GameCfg.CMLevelMusicTrack[0]];
-	if (!music_filename)
-		return 0;
+	jukebox_resolve_track_path(track_idx, resolved, sizeof(resolved));
 
-	size_full_filename = strlen(GameCfg.CMLevelMusicPath)+strlen(music_filename)+1;
-	MALLOC(full_filename, char, size_full_filename);
-	memset(full_filename, '\0', size_full_filename);
-	if (!d_stricmp(&GameCfg.CMLevelMusicPath[strlen(GameCfg.CMLevelMusicPath) - 4], ".m3u"))	// if it's from an M3U playlist
-		strcpy(full_filename, music_filename);
-	else											// if it's from a specified path
-		snprintf(full_filename, size_full_filename, "%s%s", GameCfg.CMLevelMusicPath, music_filename);
-
-	if (!songs_play_file(full_filename, ((GameCfg.CMLevelMusicPlayOrder == MUSIC_CM_PLAYORDER_LEVEL)?1:0), ((GameCfg.CMLevelMusicPlayOrder == MUSIC_CM_PLAYORDER_LEVEL)?NULL:jukebox_hook_next)))
+	if (songs_play_file(resolved, repeat, (repeat ? NULL : jukebox_hook_finished)))
 	{
-		d_free(full_filename);
-		return 0;	// whoops, got an error
+		s_jukebox_state = JUKEBOX_STATE_PLAYING;
+		con_printf(CON_DEBUG, "Soundtrack playing: %s (%s)\n", sc55_catalog[track_idx].title, resolved);
+		return 1;
+	}
+	else
+	{
+		char fallback[64];
+		snprintf(fallback, sizeof(fallback), "%s.mp3", sc55_catalog[track_idx].basename);
+		if (songs_play_file(fallback, repeat, (repeat ? NULL : jukebox_hook_finished)))
+		{
+			s_jukebox_state = JUKEBOX_STATE_PLAYING;
+			return 1;
+		}
 	}
 
-	// Formatting a pretty message
-	if (strlen(music_filename) >= MUSIC_HUDMSG_MAXLEN) {
-		strcpy(hud_msg_buf, "...");
-		strncat(hud_msg_buf, &music_filename[strlen(music_filename) - MUSIC_HUDMSG_MAXLEN], MUSIC_HUDMSG_MAXLEN);
-		hud_msg_buf[MUSIC_HUDMSG_MAXLEN+3] = '\0';
-	} else {
-		strcpy(hud_msg_buf, music_filename);
+	s_jukebox_state = JUKEBOX_STATE_STOPPED;
+	return 0;
+}
+
+int jukebox_play(void)
+{
+	if (s_jukebox_state == JUKEBOX_STATE_PAUSED)
+	{
+		songs_resume();
+		s_jukebox_state = JUKEBOX_STATE_PLAYING;
+		return 1;
 	}
+	return jukebox_play_track(s_jukebox_current_track);
+}
 
-	HUD_init_message(HM_DEFAULT, "%s %s", JUKEBOX_HUDMSG_PLAYING, hud_msg_buf);
+void jukebox_stop(void)
+{
+	songs_stop_all();
+#ifdef __3DS__
+	digi_mixer_music_cancel_preload();
+#endif
+	s_jukebox_preloaded_track = -1;
+	s_jukebox_state = JUKEBOX_STATE_STOPPED;
+	s_jukebox_active = 0;
+	s_jukebox_track_finished = 0;
+}
 
-	d_free(full_filename);
+void jukebox_pause_resume(void)
+{
+	if (s_jukebox_state == JUKEBOX_STATE_PLAYING)
+	{
+		songs_pause();
+		s_jukebox_state = JUKEBOX_STATE_PAUSED;
+	}
+	else if (s_jukebox_state == JUKEBOX_STATE_PAUSED)
+	{
+		songs_resume();
+		s_jukebox_state = JUKEBOX_STATE_PLAYING;
+	}
+	else if (s_jukebox_state == JUKEBOX_STATE_STOPPED)
+	{
+		jukebox_play_track(s_jukebox_current_track);
+	}
+}
 
+void jukebox_next(void)
+{
+	if (s_jukebox_mode == JUKEBOX_MODE_SHUFFLE)
+	{
+		int next_tr = s_jukebox_preloaded_track;
+		if (next_tr < 0 || next_tr >= JUKEBOX_TOTAL_TRACKS || next_tr == s_jukebox_current_track)
+		{
+			next_tr = s_jukebox_current_track;
+			if (JUKEBOX_TOTAL_TRACKS > 1)
+			{
+				int attempts = 10;
+				while (attempts-- > 0 && next_tr == s_jukebox_current_track)
+					next_tr = d_rand() % JUKEBOX_TOTAL_TRACKS;
+			}
+		}
+		jukebox_play_track(next_tr);
+	}
+	else
+	{
+		int next_tr = (s_jukebox_current_track + 1) % JUKEBOX_TOTAL_TRACKS;
+		jukebox_play_track(next_tr);
+	}
+}
+
+void jukebox_prev(void)
+{
+	if (s_jukebox_mode == JUKEBOX_MODE_SHUFFLE)
+	{
+		int next_tr = s_jukebox_current_track;
+		if (JUKEBOX_TOTAL_TRACKS > 1)
+		{
+			int attempts = 10;
+			while (attempts-- > 0 && next_tr == s_jukebox_current_track)
+				next_tr = d_rand() % JUKEBOX_TOTAL_TRACKS;
+		}
+		jukebox_play_track(next_tr);
+	}
+	else
+	{
+		int prev_tr = (s_jukebox_current_track - 1 + JUKEBOX_TOTAL_TRACKS) % JUKEBOX_TOTAL_TRACKS;
+		jukebox_play_track(prev_tr);
+	}
+}
+
+int jukebox_get_current_track(void)
+{
+	return s_jukebox_current_track;
+}
+
+const char *jukebox_get_current_title(void)
+{
+	return sc55_catalog[s_jukebox_current_track].title;
+}
+
+int jukebox_get_state(void)
+{
+	return s_jukebox_state;
+}
+
+int jukebox_get_mode(void)
+{
+	return s_jukebox_mode;
+}
+
+void jukebox_set_mode(int mode)
+{
+	if (mode >= JUKEBOX_MODE_LOOP && mode <= JUKEBOX_MODE_SHUFFLE)
+	{
+		s_jukebox_mode = mode;
+#ifdef __3DS__
+		if (s_jukebox_state == JUKEBOX_STATE_PLAYING && mode != JUKEBOX_MODE_LOOP)
+		{
+			int upcoming = s_jukebox_current_track;
+			if (mode == JUKEBOX_MODE_SEQUENTIAL)
+			{
+				upcoming = (s_jukebox_current_track + 1) % JUKEBOX_TOTAL_TRACKS;
+			}
+			else if (mode == JUKEBOX_MODE_SHUFFLE)
+			{
+				int attempts = 10;
+				while (attempts-- > 0 && upcoming == s_jukebox_current_track)
+				{
+					upcoming = d_rand() % JUKEBOX_TOTAL_TRACKS;
+				}
+			}
+			s_jukebox_preloaded_track = upcoming;
+			char next_path[PATH_MAX];
+			jukebox_resolve_track_path(upcoming, next_path, sizeof(next_path));
+			digi_mixer_music_preload(next_path);
+		}
+#endif
+	}
+}
+
+int jukebox_is_active(void)
+{
+	return s_jukebox_active;
+}
+
+void jukebox_set_active(int active)
+{
+	s_jukebox_active = active ? 1 : 0;
+}
+
+void jukebox_init(void)
+{
+	s_jukebox_track_finished = 0;
+}
+
+void jukebox_unload(void)
+{
+	s_jukebox_track_finished = 0;
+}
+
+void jukebox_load(void)
+{
+	s_jukebox_track_finished = 0;
+}
+
+char *jukebox_current(void)
+{
+	return (char *)sc55_catalog[s_jukebox_current_track].basename;
+}
+
+int jukebox_is_loaded(void)
+{
 	return 1;
 }
 
-char *jukebox_current() {
-	return JukeboxSongs.list[GameCfg.CMLevelMusicTrack[0]];
+int jukebox_is_playing(void)
+{
+	return (s_jukebox_state == JUKEBOX_STATE_PLAYING);
 }
 
-int jukebox_is_loaded() { return (JukeboxSongs.list != NULL); }
-int jukebox_is_playing() { return GameCfg.CMLevelMusicTrack[0] + 1; }
-int jukebox_numtracks() { return GameCfg.CMLevelMusicTrack[1]; }
+int jukebox_numtracks(void)
+{
+	return JUKEBOX_TOTAL_TRACKS;
+}
 
-void jukebox_list() {
+void jukebox_list(void)
+{
 	int i;
-	if (!JukeboxSongs.list) return;
-	if (!(*JukeboxSongs.list)) {
-		con_printf(CON_DEBUG,"* No songs have been found\n");
-	}
-	else {
-		for (i = 0; i < GameCfg.CMLevelMusicTrack[1]; i++)
-			con_printf(CON_DEBUG,"* %s\n", JukeboxSongs.list[i]);
-	}
+	for (i = 0; i < JUKEBOX_TOTAL_TRACKS; i++)
+		con_printf(CON_DEBUG, "* %s\n", sc55_catalog[i].title);
 }

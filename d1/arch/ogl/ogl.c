@@ -47,12 +47,14 @@
 #include "laser.h"
 #include "player.h"
 #include "polyobj.h"
+#include "robot.h"
 #include "gamefont.h"
 #include "byteswap.h"
 #include "internal.h"
 #include "gauges.h"
 #include "playsave.h"
 #include "args.h"
+#include "wall.h"
 
 //change to 1 for lots of spew.
 #if 0
@@ -136,6 +138,7 @@ void ogl_init_texture_stats(ogl_texture* t){
 void ogl_init_texture(ogl_texture* t, int w, int h, int flags)
 {
 	t->handle = 0;
+	t->flags = flags;
 #ifndef OGLES
 	if (flags & OGL_FLAG_NOCOLOR)
 	{
@@ -519,6 +522,38 @@ void ogl_cache_level_textures(void)
 					ogl_cache_polymodel_textures(Objects[i].rtype.pobj_info.model_num);
 			}
 		}
+
+		// Precaching all robot types, weapons, vclips, and powerups upfront.
+		// On the 3DS, on-demand glTexImage2D triggers software Morton tiling
+		// and GPU stalls mid-combat. Pre-caching all game assets at level load
+		// ensures zero dropped frames when encountering new enemies or firing weapons.
+		for (i = 0; i < N_robot_types; i++) {
+			if (Robot_info[i].model_num >= 0)
+				ogl_cache_polymodel_textures(Robot_info[i].model_num);
+			ogl_cache_vclipn_textures(Robot_info[i].exp1_vclip_num);
+			ogl_cache_vclipn_textures(Robot_info[i].exp2_vclip_num);
+			if (Robot_info[i].weapon_type >= 0)
+				ogl_cache_weapon_textures(Robot_info[i].weapon_type);
+		}
+		for (i = 0; i < N_weapon_types; i++)
+			ogl_cache_weapon_textures(i);
+		for (i = 0; i < VCLIP_MAXNUM; i++)
+			ogl_cache_vclipn_textures(i);
+		for (i = 0; i < N_powerup_types; i++) {
+			if (Powerup_info[i].vclip_num >= 0)
+				ogl_cache_vclipn_textures(Powerup_info[i].vclip_num);
+		}
+		// 3DS Performance: pre-cache door animation frames.
+		// Original code had "//TODO: doors". Without this, the first time a door
+		// opens triggers on-demand glTexImage2D (VRAM alloc + Morton tiling + cache flush),
+		// causing a 1-3 frame hitch.
+		for (i = 0; i < Num_wall_anims; i++) {
+			int j;
+			for (j = 0; j < WallAnims[i].num_frames; j++) {
+				PIGGY_PAGE_IN(Textures[WallAnims[i].frames[j]]);
+				ogl_loadbmtexture(&GameBitmaps[Textures[WallAnims[i].frames[j]].index]);
+			}
+		}
 	}
 	glmprintf((0,"finished caching\n"));
 	r_cachedtexcount = r_texcount;
@@ -538,7 +573,7 @@ bool g3_draw_line(g3s_point *p0,g3s_point *p1)
 	float bx = f2glf(p1->p3_vec.x), by = f2glf(p1->p3_vec.y), bz = -f2glf(p1->p3_vec.z);
 	float dx = bx - ax, dy = by - ay;
 	float len = sqrtf(dx*dx + dy*dy);
-	float t = 0.6f;		// thickness in view units (match automap)
+	float t = 0.36f;	// thickness in view units (match automap, ~40% thinner)
 	float nx = 0.0f, ny = 0.0f;
 	if (len > 1e-6f) { nx = -dy / len * t; ny = dx / len * t; }
 	verts[0]=ax+nx; verts[1]=ay+ny; verts[2]=az;
@@ -592,7 +627,7 @@ void ogl_draw_line_vec(g3s_point *p0, g3s_point *p1)
 	// direction in the screen plane, perpendicular offset = line thickness
 	float dx = bx - ax, dy = by - ay;
 	float len = sqrtf(dx*dx + dy*dy);
-	float t = 0.6f;		// thickness in view units (tune for visibility)
+	float t = 0.36f;	// thickness in view units (~40% thinner for sharp wireframe)
 	float nx = 0.0f, ny = 0.0f;
 	if (len > 1e-6f) { nx = -dy / len * t; ny = dx / len * t; }
 
@@ -921,10 +956,13 @@ bool g3_draw_poly(int nv,g3s_point **pointlist)
 {
 	int c, index3, index4;
 	float color_r, color_g, color_b, color_a;
-	GLfloat *vertex_array, *color_array;
+	GLfloat vertex_array_stack[24], color_array_stack[32];
+	GLfloat *vertex_array = vertex_array_stack, *color_array = color_array_stack;
 
-	MALLOC(vertex_array, GLfloat, nv*3);
-	MALLOC(color_array, GLfloat, nv*4);
+	if (nv > 8) {
+		MALLOC(vertex_array, GLfloat, nv*3);
+		MALLOC(color_array, GLfloat, nv*4);
+	}
 
 	r_polyc++;
 	glEnableClientState(GL_VERTEX_ARRAY);
@@ -958,8 +996,10 @@ bool g3_draw_poly(int nv,g3s_point **pointlist)
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
 
-	d_free(vertex_array);
-	d_free(color_array);
+	if (nv > 8) {
+		d_free(vertex_array);
+		d_free(color_array);
+	}
 
 	return 0;
 }
@@ -980,7 +1020,7 @@ extern void (*tmap_drawer_ptr)(grs_bitmap *bm,int nv,g3s_point **vertlist);
 bool g3_draw_tmap(int nv,g3s_point **pointlist,g3s_uvl *uvl_list,g3s_lrgb *light_rgb,grs_bitmap *bm)
 {
 	int c, index2, index3, index4;
-	GLfloat *vertex_array, *color_array, *texcoord_array, color_alpha = 1.0;
+	GLfloat color_alpha = 1.0;
 
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
@@ -1001,9 +1041,14 @@ bool g3_draw_tmap(int nv,g3s_point **pointlist,g3s_uvl *uvl_list,g3s_lrgb *light
 		return 0;
 	}
 
-	MALLOC(vertex_array, GLfloat, nv*3);
-	MALLOC(color_array, GLfloat, nv*4);
-	MALLOC(texcoord_array, GLfloat, nv*2);
+	GLfloat vertex_array_stack[24], color_array_stack[32], texcoord_array_stack[16];
+	GLfloat *vertex_array = vertex_array_stack, *color_array = color_array_stack, *texcoord_array = texcoord_array_stack;
+
+	if (nv > 8) {
+		MALLOC(vertex_array, GLfloat, nv*3);
+		MALLOC(color_array, GLfloat, nv*4);
+		MALLOC(texcoord_array, GLfloat, nv*2);
+	}
 
 	for (c=0; c<nv; c++) {
 		index2 = c * 2;
@@ -1044,9 +1089,11 @@ bool g3_draw_tmap(int nv,g3s_point **pointlist,g3s_uvl *uvl_list,g3s_lrgb *light
 	glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
-	d_free(vertex_array);
-	d_free(color_array);
-	d_free(texcoord_array);
+	if (nv > 8) {
+		d_free(vertex_array);
+		d_free(color_array);
+		d_free(texcoord_array);
+	}
 
 	return 0;
 }
@@ -1057,11 +1104,14 @@ bool g3_draw_tmap(int nv,g3s_point **pointlist,g3s_uvl *uvl_list,g3s_lrgb *light
 bool g3_draw_tmap_2(int nv, g3s_point **pointlist, g3s_uvl *uvl_list, g3s_lrgb *light_rgb, grs_bitmap *bmbot, grs_bitmap *bm, int orient)
 {
 	int c, index2, index3, index4;
-	GLfloat *vertex_array, *color_array, *texcoord_array;
+	GLfloat vertex_array_stack[24], color_array_stack[32], texcoord_array_stack[16];
+	GLfloat *vertex_array = vertex_array_stack, *color_array = color_array_stack, *texcoord_array = texcoord_array_stack;
 
-	MALLOC(vertex_array, GLfloat, nv*3);
-	MALLOC(color_array, GLfloat, nv*4);
-	MALLOC(texcoord_array, GLfloat, nv*2);
+	if (nv > 8) {
+		MALLOC(vertex_array, GLfloat, nv*3);
+		MALLOC(color_array, GLfloat, nv*4);
+		MALLOC(texcoord_array, GLfloat, nv*2);
+	}
 
 	g3_draw_tmap(nv,pointlist,uvl_list,light_rgb,bmbot);//draw the bottom texture first.. could be optimized with multitexturing..
 	
@@ -1120,9 +1170,11 @@ bool g3_draw_tmap_2(int nv, g3s_point **pointlist, g3s_uvl *uvl_list, g3s_lrgb *
 	glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
-	d_free(vertex_array);
-	d_free(color_array);
-	d_free(texcoord_array);
+	if (nv > 8) {
+		d_free(vertex_array);
+		d_free(color_array);
+		d_free(texcoord_array);
+	}
 
 	return 0;
 }
@@ -1139,7 +1191,37 @@ bool g3_draw_bitmap_full(vms_vector *pos,fix width,fix height,grs_bitmap *bm,
 
 	r_bitmapc++;
 	v1.z=0;
-	
+
+	vm_vec_sub(&v1,pos,&View_position);
+	vm_vec_rotate(&pv,&v1,&View_matrix);
+
+	// Behind camera or at near clip plane
+	if (pv.z <= F1_0 / 4)
+		return 0;
+
+	width = fixmul(width,Matrix_scale.x);
+	height = fixmul(height,Matrix_scale.y);
+
+#if defined(__3DS__)
+	// 3DS PICA200 Optimization:
+	// When firing point-blank against a wall, explosion and fireball billboards
+	// are spawned inches in front of the camera. In perspective projection,
+	// projected screen size scales inversely with depth (~ width / pv.z).
+	// An unclamped quad at pv.z < 1.0 expands far past the screen boundaries,
+	// causing 8-10 overlapping fullscreen alpha passes that saturate the PICA200
+	// fillrate (~150 MPix/s) and drop frames.
+	// Clamping the billboard radius when close to the camera keeps each impact quad
+	// within a realistic localized burst without blowing up the fillrate.
+	if (pv.z < F1_0 * 4)
+	{
+		fix max_dim = fixmul(pv.z, F1_0 * 3 / 2);
+		if (width > max_dim)
+			width = max_dim;
+		if (height > max_dim)
+			height = max_dim;
+	}
+#endif
+
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -1148,35 +1230,37 @@ bool g3_draw_bitmap_full(vms_vector *pos,fix width,fix height,grs_bitmap *bm,
 	ogl_bindbmtex(bm);
 	ogl_texwrap(bm->gltexture,GL_CLAMP_TO_EDGE);
 
-	width = fixmul(width,Matrix_scale.x);
-	height = fixmul(height,Matrix_scale.y);
+#if defined(__3DS__)
+	glEnable(GL_ALPHA_TEST);
+	glAlphaFunc(GL_GREATER, 0.05f);
+#endif
+
 	for (i=0;i<4;i++){
-		vm_vec_sub(&v1,pos,&View_position);
-		vm_vec_rotate(&pv,&v1,&View_matrix);
+		vms_vector corner_pv = pv;
 		switch (i){
 			case 0:
 				texcoord_array[i*2] = 0.0;
 				texcoord_array[i*2+1] = 0.0;
-				pv.x+=-width;
-				pv.y+=height;
+				corner_pv.x+=-width;
+				corner_pv.y+=height;
 				break;
 			case 1:
 				texcoord_array[i*2] = bm->gltexture->u;
 				texcoord_array[i*2+1] = 0.0;
-				pv.x+=width;
-				pv.y+=height;
+				corner_pv.x+=width;
+				corner_pv.y+=height;
 				break;
 			case 2:
 				texcoord_array[i*2] = bm->gltexture->u;
 				texcoord_array[i*2+1] = bm->gltexture->v;
-				pv.x+=width;
-				pv.y+=-height;
+				corner_pv.x+=width;
+				corner_pv.y+=-height;
 				break;
 			case 3:
 				texcoord_array[i*2] = 0.0;
 				texcoord_array[i*2+1] = bm->gltexture->v;
-				pv.x+=-width;
-				pv.y+=-height;
+				corner_pv.x+=-width;
+				corner_pv.y+=-height;
 				break;
 		}
 
@@ -1185,9 +1269,9 @@ bool g3_draw_bitmap_full(vms_vector *pos,fix width,fix height,grs_bitmap *bm,
 		color_array[i*4+2]  = b;
 		color_array[i*4+3]  = (grd_curcanv->cv_fade_level >= GR_FADE_OFF)?1.0:(1.0 - (float)grd_curcanv->cv_fade_level / ((float)GR_FADE_LEVELS - 1.0));
 		
-		vertex_array[i*3]   = f2glf(pv.x);
-		vertex_array[i*3+1] = f2glf(pv.y);
-		vertex_array[i*3+2] = -f2glf(pv.z);
+		vertex_array[i*3]   = f2glf(corner_pv.x);
+		vertex_array[i*3+1] = f2glf(corner_pv.y);
+		vertex_array[i*3+2] = -f2glf(corner_pv.z);
 	}
 	glVertexPointer(3, GL_FLOAT, 0, vertex_array);
 	glColorPointer(4, GL_FLOAT, 0, color_array);
@@ -1762,13 +1846,20 @@ int ogl_loadtexture (unsigned char *data, int dxo, int dyo, ogl_texture *tex, in
 	OGL_BINDTEXTURE(tex->handle);
 	glTexEnvi (GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
+	if ((bm_flags & BM_FLAG_FONT) || (tex && (tex->flags & OGL_FLAG_FONT)))
+		texfilt = 0;
+
 	if (texfilt)
 	{
 #if defined(OGLES) && !defined(__3DS__) // in OpenGL ES 1.1 the mipmaps are automatically generated by a parameter
 		glTexParameteri (GL_TEXTURE_2D, GL_GENERATE_MIPMAP, texfilt ? GL_TRUE : GL_FALSE);
 #endif
 		glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+#ifdef __3DS__
+		glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (texfilt ? GL_LINEAR : GL_NEAREST));
+#else
 		glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (texfilt>=2?GL_LINEAR_MIPMAP_LINEAR:GL_LINEAR_MIPMAP_NEAREST));
+#endif
 #ifndef OGLES
 		if (texfilt >= 3 && ogl_maxanisotropy > 1.0)
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, ogl_maxanisotropy);
@@ -1826,6 +1917,8 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt)
 		bm=bm->bm_parent;
 	if (bm->gltexture && bm->gltexture->handle > 0)
 		return;
+	if ((bm->bm_flags & BM_FLAG_FONT) || (bm->gltexture && (bm->gltexture->flags & OGL_FLAG_FONT)))
+		texfilt = 0;
 	buf=bm->bm_data;
 #ifdef HAVE_LIBPNG
 	if ((bitmapname = piggy_game_bitmap_name(bm)))
@@ -1858,7 +1951,7 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt)
 	}
 #endif
 	if (bm->gltexture == NULL){
- 		ogl_init_texture(bm->gltexture = ogl_get_free_texture(), bm->bm_w, bm->bm_h, ((bm->bm_flags & (BM_FLAG_TRANSPARENT | BM_FLAG_SUPER_TRANSPARENT))? OGL_FLAG_ALPHA : 0));
+ 		ogl_init_texture(bm->gltexture = ogl_get_free_texture(), bm->bm_w, bm->bm_h, ((bm->bm_flags & (BM_FLAG_TRANSPARENT | BM_FLAG_SUPER_TRANSPARENT))? OGL_FLAG_ALPHA : 0) | ((bm->bm_flags & BM_FLAG_FONT) ? OGL_FLAG_FONT : 0));
 	}
 	else {
 		if (bm->gltexture->handle>0)
@@ -2001,6 +2094,8 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt)
 #endif
 
 	}
+	if ((bm->bm_flags & BM_FLAG_FONT) || (bm->gltexture && (bm->gltexture->flags & OGL_FLAG_FONT)))
+		texfilt = 0;
 	ogl_loadtexture(buf, 0, 0, bm->gltexture, bm->bm_flags, 0, texfilt);
 }
 
@@ -2067,6 +2162,11 @@ bool ogl_ubitmapm_cs(int x, int y,int dw, int dh, grs_bitmap *bm,int c, int scal
 	OGL_ENABLE(TEXTURE_2D);
 	ogl_bindbmtex(bm);
 	ogl_texwrap(bm->gltexture,GL_CLAMP_TO_EDGE);
+	if ((bm->bm_flags & BM_FLAG_FONT) || (bm->gltexture && (bm->gltexture->flags & OGL_FLAG_FONT)))
+	{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	}
 	
 	if (bm->bm_x==0){
 		u1=0;

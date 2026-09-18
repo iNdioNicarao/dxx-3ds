@@ -1517,7 +1517,7 @@ void draw_energy_bar(int energy)
 			if (x2 > HUD_SCALE_X(LEFT_ENERGY_GAUGE_W) - (y*aplitscale)/3)
 				x2 = HUD_SCALE_X(LEFT_ENERGY_GAUGE_W) - (y*aplitscale)/3;
 
-			if (x2 > x1) gr_uline( i2f(x1+HUD_SCALE_X(LEFT_ENERGY_GAUGE_X)), i2f(y+HUD_SCALE_Y(LEFT_ENERGY_GAUGE_Y)), i2f(x2+HUD_SCALE_X(LEFT_ENERGY_GAUGE_X)), i2f(y+HUD_SCALE_Y(LEFT_ENERGY_GAUGE_Y)) );
+			if (x2 > x1) gr_rect( x1+HUD_SCALE_X(LEFT_ENERGY_GAUGE_X), y+HUD_SCALE_Y(LEFT_ENERGY_GAUGE_Y), x2+HUD_SCALE_X(LEFT_ENERGY_GAUGE_X), y+HUD_SCALE_Y(LEFT_ENERGY_GAUGE_Y) );
 		}
 
 	gr_set_current_canvas( NULL );
@@ -1534,7 +1534,7 @@ void draw_energy_bar(int energy)
 			if (x1 < (y*aplitscale)/3)
 				x1 = (y*aplitscale)/3;
 
-			if (x2 > x1) gr_uline( i2f(x1+HUD_SCALE_X(RIGHT_ENERGY_GAUGE_X)), i2f(y+HUD_SCALE_Y(RIGHT_ENERGY_GAUGE_Y)), i2f(x2+HUD_SCALE_X(RIGHT_ENERGY_GAUGE_X)), i2f(y+HUD_SCALE_Y(RIGHT_ENERGY_GAUGE_Y)) );
+			if (x2 > x1) gr_rect( x1+HUD_SCALE_X(RIGHT_ENERGY_GAUGE_X), y+HUD_SCALE_Y(RIGHT_ENERGY_GAUGE_Y), x2+HUD_SCALE_X(RIGHT_ENERGY_GAUGE_X), y+HUD_SCALE_Y(RIGHT_ENERGY_GAUGE_Y) );
 		}
 
 	gr_set_current_canvas( NULL );
@@ -1885,7 +1885,7 @@ void draw_weapon_boxes()
 
 void sb_draw_energy_bar(int energy)
 {
-	int erase_height,i;
+	int erase_height;
 	int ew, eh, eaw;
 
 	PIGGY_PAGE_IN(Gauges[SB_GAUGE_ENERGY]);
@@ -1893,8 +1893,12 @@ void sb_draw_energy_bar(int energy)
 
 	erase_height = HUD_SCALE_Y((100 - energy) * SB_ENERGY_GAUGE_H / 100);
 	gr_setcolor( 0 );
-	for (i=0;i<erase_height;i++)
-		gr_uline( i2f(HUD_SCALE_X(SB_ENERGY_GAUGE_X-1)), i2f(HUD_SCALE_Y(SB_ENERGY_GAUGE_Y)+i), i2f(HUD_SCALE_X(SB_ENERGY_GAUGE_X+(SB_ENERGY_GAUGE_W))), i2f(HUD_SCALE_Y(SB_ENERGY_GAUGE_Y)+i) );
+	// 3DS Performance: replaced per-scanline gr_uline loop (~50 individual GL draw calls)
+	// with a single gr_rect call (1 draw call). Each gr_uline issued a separate
+	// glDrawArrays(GL_LINES) through ogl_ulinec, overwhelming the PICA200 command buffer.
+	if (erase_height > 0)
+		gr_rect(HUD_SCALE_X(SB_ENERGY_GAUGE_X-1), HUD_SCALE_Y(SB_ENERGY_GAUGE_Y),
+		        HUD_SCALE_X(SB_ENERGY_GAUGE_X+(SB_ENERGY_GAUGE_W)), HUD_SCALE_Y(SB_ENERGY_GAUGE_Y)+erase_height-1);
 
 	gr_set_current_canvas( NULL );
 

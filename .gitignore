@@ -18,6 +18,12 @@ diag/
 d1/3ds_data/romfs/descent.hog
 d1/3ds_data/romfs/descent.pig
 # Also the DXX music pack + jingles are user-supplied (see README).
+*.mp3
+*.ogg
+*.wav
+soundtrack/*.mp3
+soundtrack/*.ogg
+soundtrack/*.wav
 
 # --- Tooling binaries (download separately; never commit) ---
 bannertool
@@ -42,3 +48,4 @@ d1/d1x-3ds.smdh
 d1/d1x-3ds.map
 d1/3ds_data/banner.bnr
 d1/3ds_data/icon.icn
+*.ignored

@@ -435,7 +435,7 @@ void free_mission(void)
 		{
 			char hogpath[PATH_MAX];
 
-			sprintf(hogpath, MISSION_DIR "%s.hog", Current_mission->path);
+			sprintf(hogpath, "%s%s.hog", (Current_mission->location == ML_MISSIONDIR)?MISSION_DIR:"", Current_mission->path);
 			PHYSFSX_contfile_close(hogpath);
 		}
 
@@ -453,7 +453,50 @@ void free_mission(void)
     }
 }
 
+static void add_missions_from_dir(mle *mission_list, const char *dir_name, int location, int anarchy_mode)
+{
+	char **find, **i, *ext;
+	find = PHYSFS_enumerateFiles(dir_name);
+	if (!find) return;
 
+	for (i = find; *i != NULL; i++)
+	{
+		ext = strrchr(*i, '.');
+		if (ext && (!d_strnicmp(ext, ".msn", 4) || !d_strnicmp(ext, ".mn2", 4)))
+		{
+			int duplicate = 0;
+			char base[FILENAME_LEN];
+			strncpy(base, *i, sizeof(base)-1);
+			base[sizeof(base)-1] = '\0';
+			char *dot = strrchr(base, '.');
+			if (dot) *dot = '\0';
+
+			for (int m = 0; m < num_missions; m++) {
+				if (mission_list[m].filename && !d_stricmp(mission_list[m].filename, base)) {
+					duplicate = 1;
+					break;
+				}
+			}
+			if (duplicate) continue;
+
+			if (read_mission_file(&mission_list[num_missions], *i, location))
+			{
+				if (anarchy_mode || !mission_list[num_missions].anarchy_only_flag)
+				{
+					mission_list[num_missions].builtin_hogsize = 0;
+					num_missions++;
+				}
+				else
+					d_free(mission_list[num_missions].path);
+			}
+		}
+
+		if (num_missions >= MAX_MISSIONS)
+			break;
+	}
+
+	PHYSFS_freeList(find);
+}
 
 //fills in the global list of missions.  Returns the number of missions
 //in the list.  If anarchy_mode is set, then also add anarchy-only missions.
@@ -464,25 +507,13 @@ mle *build_mission_list(int anarchy_mode)
 	int top_place;
 	char	search_str[PATH_MAX] = MISSION_DIR;
 
-	//now search for levels on disk
-
-//@@Took out this code because after this routine was called once for
-//@@a list of single-player missions, a subsequent call for a list of
-//@@anarchy missions would not scan again, and thus would not find the
-//@@anarchy-only missions.  If we retain the minimum level of install,
-//@@we may want to put the code back in, having it always scan for all
-//@@missions, and have the code that uses it sort out the ones it wants.
-//@@	if (num_missions != -1) {
-//@@		if (Current_mission_num != 0)
-//@@			load_mission(0);				//set built-in mission as default
-//@@		return num_missions;
-//@@	}
-
 	MALLOC(mission_list, mle, MAX_MISSIONS);
 	num_missions = 0;
 	
 	add_d1_builtin_mission_to_list(mission_list + num_missions);
 	add_missions_to_list(mission_list, search_str, search_str + strlen(search_str), anarchy_mode);
+	// Also scan base search directory (e.g. /3ds/D1/) for directly dropped missions
+	add_missions_from_dir(mission_list, "", ML_CURDIR, anarchy_mode);
 	
 	// move original missions (in story-chronological order)
 	// to top of mission list

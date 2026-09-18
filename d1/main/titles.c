@@ -48,6 +48,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "mouse.h"
 #include "console.h"
 #include "args.h"
+#include "event.h"
 
 #ifdef OGL
 #include "ogl_init.h"
@@ -164,7 +165,11 @@ static int show_title_screen( char * filename, int allow_keys, int from_hog_only
 		return 0;
 	}
 
+#ifdef __3DS__
+	while (window_exists(wind) && !d1x_powering_off)
+#else
 	while (window_exists(wind))
+#endif
 		event_process();
 
 	return 0;
@@ -1154,7 +1159,11 @@ void do_briefing_screens(char *filename, int level_num)
 
 	// Stay where we are in the stack frame until briefing done
 	// Too complicated otherwise
+#ifdef __3DS__
+	while (window_exists(wind) && !d1x_powering_off)
+#else
 	while (window_exists(wind))
+#endif
 		event_process();
 }
 

@@ -53,6 +53,7 @@
 #include "console.h"
 #include "config.h"
 #include "vers_id.h"
+#include <math.h>
 #include "game.h"
 
 #if defined(__APPLE__) && defined(__MACH__)
@@ -532,6 +533,7 @@ static void ogl_init_state(void)
 	glLoadIdentity();//clear matrix
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_DITHER);
 	gr_palette_step_up(0,0,0);//in case its left over from in game
 
 	ogl_init_pixel_buffers(grd_curscreen->sc_w, grd_curscreen->sc_h);
@@ -945,6 +947,91 @@ void ogl_urect(int left,int top,int right,int bot)
 
 void ogl_ulinec(int left,int top,int right,int bot,int c)
 {
+#ifdef __3DS__
+	GLfloat x1, y1, x2, y2;
+	GLfloat alpha = (grd_curcanv->cv_fade_level >= GR_FADE_OFF)?1.0f:1.0f - (float)grd_curcanv->cv_fade_level / ((float)GR_FADE_LEVELS - 1.0f);
+	GLfloat color_array[] = {
+		CPAL2Tr(c), CPAL2Tg(c), CPAL2Tb(c), alpha,
+		CPAL2Tr(c), CPAL2Tg(c), CPAL2Tb(c), alpha,
+		CPAL2Tr(c), CPAL2Tg(c), CPAL2Tb(c), alpha,
+		CPAL2Tr(c), CPAL2Tg(c), CPAL2Tb(c), alpha
+	};
+
+	if (left == right)
+	{
+		int y_min = (top < bot) ? top : bot;
+		int y_max = (top < bot) ? bot : top;
+		x1 = (left + grd_curcanv->cv_bitmap.bm_x) / (float)last_width;
+		x2 = (left + 1 + grd_curcanv->cv_bitmap.bm_x) / (float)last_width;
+		y1 = 1.0f - (y_min + grd_curcanv->cv_bitmap.bm_y) / (float)last_height;
+		y2 = 1.0f - (y_max + 1 + grd_curcanv->cv_bitmap.bm_y) / (float)last_height;
+
+		GLfloat verts[8] = { x1, y1, x1, y2, x2, y2, x2, y1 };
+		OGL_DISABLE(TEXTURE_2D);
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glEnableClientState(GL_COLOR_ARRAY);
+		glVertexPointer(2, GL_FLOAT, 0, verts);
+		glColorPointer(4, GL_FLOAT, 0, color_array);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+		glDisableClientState(GL_VERTEX_ARRAY);
+		glDisableClientState(GL_COLOR_ARRAY);
+		return;
+	}
+
+	if (top == bot)
+	{
+		int x_min = (left < right) ? left : right;
+		int x_max = (left < right) ? right : left;
+		x1 = (x_min + grd_curcanv->cv_bitmap.bm_x) / (float)last_width;
+		x2 = (x_max + 1 + grd_curcanv->cv_bitmap.bm_x) / (float)last_width;
+		y1 = 1.0f - (top + grd_curcanv->cv_bitmap.bm_y) / (float)last_height;
+		y2 = 1.0f - (top + 1 + grd_curcanv->cv_bitmap.bm_y) / (float)last_height;
+
+		GLfloat verts[8] = { x1, y1, x1, y2, x2, y2, x2, y1 };
+		OGL_DISABLE(TEXTURE_2D);
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glEnableClientState(GL_COLOR_ARRAY);
+		glVertexPointer(2, GL_FLOAT, 0, verts);
+		glColorPointer(4, GL_FLOAT, 0, color_array);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+		glDisableClientState(GL_VERTEX_ARRAY);
+		glDisableClientState(GL_COLOR_ARRAY);
+		return;
+	}
+
+	// Diagonal line: emit thin triangle strip quad (picaGL lacks GL_LINES)
+	GLfloat dx = (GLfloat)(right - left);
+	GLfloat dy = (GLfloat)(bot - top);
+	GLfloat len = sqrtf(dx*dx + dy*dy);
+	if (len < 1e-4f) {
+		ogl_upixelc(left, top, c);
+		return;
+	}
+	GLfloat half_w = 0.5f;
+	GLfloat nx = (-dy / len) * half_w;
+	GLfloat ny = (dx / len) * half_w;
+
+	GLfloat xo = (GLfloat)(left + grd_curcanv->cv_bitmap.bm_x);
+	GLfloat yo = (GLfloat)(top + grd_curcanv->cv_bitmap.bm_y);
+	GLfloat xf = (GLfloat)(right + grd_curcanv->cv_bitmap.bm_x);
+	GLfloat yf = (GLfloat)(bot + grd_curcanv->cv_bitmap.bm_y);
+
+	GLfloat verts[8] = {
+		(xo + nx) / (float)last_width, 1.0f - (yo + ny) / (float)last_height,
+		(xo - nx) / (float)last_width, 1.0f - (yo - ny) / (float)last_height,
+		(xf + nx) / (float)last_width, 1.0f - (yf + ny) / (float)last_height,
+		(xf - nx) / (float)last_width, 1.0f - (yf - ny) / (float)last_height
+	};
+
+	OGL_DISABLE(TEXTURE_2D);
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
+	glVertexPointer(2, GL_FLOAT, 0, verts);
+	glColorPointer(4, GL_FLOAT, 0, color_array);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
+#else
 	GLfloat xo,yo,xf,yf;
 	GLfloat color_array[] = { CPAL2Tr(c), CPAL2Tg(c), CPAL2Tb(c), (grd_curcanv->cv_fade_level >= GR_FADE_OFF)?1.0:1.0 - (float)grd_curcanv->cv_fade_level / ((float)GR_FADE_LEVELS - 1.0), CPAL2Tr(c), CPAL2Tg(c), CPAL2Tb(c), (grd_curcanv->cv_fade_level >= GR_FADE_OFF)?1.0:1.0 - (float)grd_curcanv->cv_fade_level / ((float)GR_FADE_LEVELS - 1.0), CPAL2Tr(c), CPAL2Tg(c), CPAL2Tb(c), 1.0, CPAL2Tr(c), CPAL2Tg(c), CPAL2Tb(c), (grd_curcanv->cv_fade_level >= GR_FADE_OFF)?1.0:1.0 - (float)grd_curcanv->cv_fade_level / ((float)GR_FADE_LEVELS - 1.0) };
 	GLfloat vertex_array[] = { 0.0, 0.0, 0.0, 0.0 };
@@ -969,6 +1056,7 @@ void ogl_ulinec(int left,int top,int right,int bot,int c)
 	glDrawArrays(GL_LINES, 0, 2);
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
+#endif
 }
 
 GLfloat last_r=0, last_g=0, last_b=0;

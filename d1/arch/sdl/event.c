@@ -19,6 +19,7 @@
 #include "config.h"
 
 #include "joy.h"
+#include "jukebox.h"
 
 extern void key_handler(SDL_KeyboardEvent *event);
 extern void mouse_button_handler(SDL_MouseButtonEvent *mbe);
@@ -327,7 +328,20 @@ void event_poll()
 		if (val < -127) val = -127;
 		if (val > 127) val = 127;
 		
-		if (val > -20 && val < 20) val = 0;
+		if (i >= 2) {
+			// C-Stick (axes 2 & 3): deadzone + quadratic response curve
+			const int deadzone = 15;
+			int sign = (val < 0) ? -1 : 1;
+			int mag = abs(val);
+			if (mag <= deadzone) {
+				val = 0;
+			} else {
+				int scaled = ((mag - deadzone) * 127) / (127 - deadzone);
+				val = sign * (scaled * scaled) / 127;
+			}
+		} else {
+			if (val > -20 && val < 20) val = 0;
+		}
 
 		if (val != old_axes[i]) {
 			d_event_joystick_moved ev;
@@ -411,14 +425,26 @@ void event_send(d_event *event)
 void event_process(void)
 {
 	d_event event;
-	#ifdef __3DS__
-	// con_printf(CON_URGENT, "[TITLE-BUILD-23 event_process enter\n");
-	#endif
+#ifdef __3DS__
+	extern volatile int d1x_powering_off;
+	/* 3DS: Pump the OS APT message loop every frame regardless of which
+	 * screen or menu is active. Without this, modal screens like the Level
+	 * Complete screen, message boxes, and submenus never process the HOME
+	 * button or POWER button presses. */
+	if (!aptMainLoop() || d1x_powering_off) {
+		d1x_powering_off = 1;
+		window *w = window_get_front();
+		if (w) window_close(w);
+		return;
+	}
+#endif
 	window *wind = window_get_front();
 
 	timer_update();
 
 	event_poll();	// send input events first
+
+	jukebox_poll();
 
 	// Process deferred quick-save/load HERE, after event_poll() has returned,
 	// so state_restore_all_sub()/state_save_all_sub() never run mid-dispatch
@@ -427,6 +453,15 @@ void event_process(void)
 	int did_ql = pending_quick_save || pending_quick_load;
 	if (pending_quick_save) { pending_quick_save = 0; state_quick_save(); }
 	if (pending_quick_load) { pending_quick_load = 0; state_quick_load(); }
+
+#ifdef __3DS__
+	extern int get_pending_sleep_pause(void);
+	extern window *Game_wind;
+	if (get_pending_sleep_pause() && (window_get_front() == Game_wind) && (Game_wind != NULL)) {
+		do_game_pause();
+		did_ql = 1;
+	}
+#endif
 
 	// Doing this prevents problems when a draw event can create a newmenu,
 	// such as some network menus when they report a problem. But after a
@@ -468,14 +503,10 @@ void event_process(void)
 	 * the single present each overlay frame, makes the overlay reliably
 	 * visible regardless of how the stereo flag was last left. Live gameplay
 	 * (Game_wind == front) keeps stereo via game_render_frame_mono(). */
-	extern void pglSetStereo(bool enable);
-	extern void pglSelectScreen(unsigned display, unsigned side);
-	extern int g_stereo_active;
+	extern void stereo_suspend(void);
 	if (window_get_front() != Game_wind)
 	{
-		pglSetStereo(false);
-		g_stereo_active = 0;
-		pglSelectScreen(0/*GFX_TOP*/, 0/*GFX_LEFT*/);
+		stereo_suspend();
 	}
 #endif
 

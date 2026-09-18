@@ -29,6 +29,8 @@ extern int RegisterPlayer();
 // returns number of item chosen
 extern int DoMenu();
 extern void do_options_menu();
+extern void do_sound_menu(void);
+extern void do_jukebox_menu(void);
 extern int select_demo(void);
 #define Menu_pcx_name (((SWIDTH>=640&&SHEIGHT>=480) && PHYSFSX_exists("menuh.pcx",1))?"menuh.pcx":"menu.pcx")
 #define STARS_BACKGROUND (((SWIDTH>=640&&SHEIGHT>=480) && PHYSFSX_exists("starsb.pcx",1))?"starsb.pcx":"stars.pcx")

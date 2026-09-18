@@ -106,6 +106,8 @@ typedef struct player_config
 	ubyte ObsTurbo;
 	ubyte ObsShowNames;
 	ubyte ObsShowObs; 
+	int GyroDeadzone;
+	int GyroSensitivity;
 } __pack__ player_config;
 
 extern struct player_config PlayerCfg;

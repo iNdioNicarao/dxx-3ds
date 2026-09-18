@@ -1599,5 +1599,18 @@ void net_missile_firing(int player, int gun, int flags, vms_vector shot_orientat
 }
 #endif
 
+void laser_do_crosshair(object *objp)
+{
+	(void)objp;
+	if (grd_curcanv == NULL || Player_is_dead || Rear_view) return;
+	if (PlayerCfg.CockpitMode[1] == CM_LETTERBOX) return;
 
-
+	int x = grd_curcanv->cv_bitmap.bm_w / 2;
+	int y = grd_curcanv->cv_bitmap.bm_h / 2;
+	int c = BM_XRGB(0, 31, 0); // bright green convergence crosshair
+	gr_setcolor(c);
+	gr_uline(i2f(x - 5), i2f(y), i2f(x - 2), i2f(y));
+	gr_uline(i2f(x + 2), i2f(y), i2f(x + 5), i2f(y));
+	gr_uline(i2f(x), i2f(y - 5), i2f(x), i2f(y - 2));
+	gr_uline(i2f(x), i2f(y + 2), i2f(x), i2f(y + 5));
+}
