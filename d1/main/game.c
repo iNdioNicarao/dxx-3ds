@@ -77,8 +77,10 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "kconfig.h"
 #include "config.h"
 #include "mouse.h"
+#ifdef __3DS__
 #include "bottom_screen.h" /* 3DS bottom-screen UI (in-game MENU button) */
 #include "tactical_bottom.h" /* 3DS tactical radar & rear-view mirror */
+#endif
 #include "switch.h"
 #include "controls.h"
 #include "songs.h"
@@ -1155,12 +1157,24 @@ int game_handler(window *wind, d_event *event, void *data)
 			bottom_clear(0);
 			return 1;
 		}
-		if (Current_level_num > 0 && bottom_save_tapped()) {
+		if (bottom_save_tapped()) {
+			if (Game_mode & GM_MULTI) {
+				Show_kill_list = (Show_kill_list + 1) % ((Game_mode & GM_TEAM) ? 4 : 3);
+				Show_kill_list_timer = 0;
+				multi_sort_kill_list();
+				const char *mode_str = "OFF";
+				if (Show_kill_list == 1) mode_str = "Kills";
+				else if (Show_kill_list == 2) mode_str = "Deaths";
+				else if (Show_kill_list == 3) mode_str = "Team";
+				HUD_init_message(HM_DEFAULT, "Scoreboard: %s", mode_str);
+				return 1;
+			} else if (Current_level_num > 0) {
 				/* state_save_all(0) is the in-game save path (same as F2).
 				 * It opens the top-screen save-slot menu; safe ONLY here,
 				 * mid-level. Must not run from the main menu. */
 				state_save_all(0);
 				return 1;
+			}
 		}
 			if (bottom_rec_tapped()) {
 				/* The 3DS has no F5 key, so demo recording (PC: F5) is

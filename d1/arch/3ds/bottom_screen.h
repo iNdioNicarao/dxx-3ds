@@ -69,6 +69,21 @@ void bottom_pilot_delete_reset(void);
 int bottom_demo_delete_tapped(int enable);
 void bottom_demo_delete_reset(void);
 
+/* Netgame lobby "START NETGAME" on-screen button (3DS only).
+ * enable=1 when at least one player is present to start the game. */
+int bottom_netgame_start_tapped(int enable);
+void bottom_netgame_start_reset(void);
+
+/* LAN browser "RESCAN LAN" on-screen button (3DS only). */
+int bottom_lan_rescan_tapped(void);
+void bottom_lan_rescan_reset(void);
+
+/* Direct Join on-screen buttons (3DS only): "ENTER IP ADDRESS" & "CONNECT". */
+int bottom_direct_ip_tapped(void);
+void bottom_direct_ip_reset(void);
+int bottom_direct_connect_tapped(void);
+void bottom_direct_connect_reset(void);
+
 /* In-game "MENU" on-screen button (3DS only). Shown persistently while a game
  * runs; returns 1 on a fresh tap so the caller can open the PAUSE menu
  * (do_game_pause) — NOT hard-exit the game. reset() clears dirty-state. */

@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <fcntl.h>
 
 #include "pstypes.h"
 #include "window.h"
@@ -54,6 +55,12 @@
 #ifdef _WIN32
 #include <Windows.h>
 #include <wincrypt.h>
+#endif
+
+#ifdef __3DS__
+#include <3ds.h>
+#include "bottom_screen.h"
+#include "osk.h"
 #endif
 
 // Prototypes
@@ -324,6 +331,9 @@ ssize_t dxx_sendto(int sockfd, const void *msg, int len, unsigned int flags, con
 
 ssize_t dxx_recvfrom(int sockfd, void *buf, int len, unsigned int flags, struct sockaddr *from, socklen_t *fromlen)
 {
+#ifdef MSG_DONTWAIT
+	flags |= MSG_DONTWAIT;
+#endif
 	ssize_t rv = recvfrom(sockfd, buf, len, flags, from, fromlen);
 
 	net_log_log(0, buf, rv, from, *fromlen); 
@@ -499,7 +509,10 @@ int udp_open_socket(int socknum, int port)
 			freeaddrinfo (res);
 			return -1;
 		}
-	
+
+		int opt_reuse = 1;
+		setsockopt(UDP_Socket[socknum], SOL_SOCKET, SO_REUSEADDR, &opt_reuse, sizeof(opt_reuse));
+
 		if ((err = bind (UDP_Socket[socknum], sres->ai_addr, sres->ai_addrlen)) < 0)
 		{
 			con_printf(CON_URGENT,"udp_open_socket: bind name to socket failed (port %i)\n", port);
@@ -516,7 +529,13 @@ int udp_open_socket(int socknum, int port)
 		con_printf(CON_URGENT,"udp_open_socket (getaddrinfo):%s failed. port %i\n", gai_strerror (err), port);
 		nm_messagebox(TXT_ERROR,1,TXT_OK,"Port: %i\nCould not get address information:\n%s", port, gai_strerror (err));
 	}
-	setsockopt( UDP_Socket[socknum], SOL_SOCKET, SO_BROADCAST, &bcast, sizeof(bcast) );
+	if (UDP_Socket[socknum] != -1)
+	{
+		int fl = fcntl(UDP_Socket[socknum], F_GETFL, 0);
+		if (fl != -1)
+			fcntl(UDP_Socket[socknum], F_SETFL, fl | O_NONBLOCK);
+		setsockopt( UDP_Socket[socknum], SOL_SOCKET, SO_BROADCAST, &bcast, sizeof(bcast) );
+	}
 #endif
 
 	return 0;
@@ -636,10 +655,10 @@ int udp_tracker_register()
 	// Put the GameID
 	PUT_INTEL_INT( pBuf+5, Netgame.protocol.udp.GameID );
 	
-	// Now, put the game version
-	PUT_INTEL_SHORT( pBuf+9, DXX_VERSION_MAJORi );
-	PUT_INTEL_SHORT( pBuf+11, DXX_VERSION_MINORi );
-	PUT_INTEL_SHORT( pBuf+13, DXX_VERSION_MICROi );
+	// Now, put the game version (matches DXX-Rebirth network protocol)
+	PUT_INTEL_SHORT( pBuf+9, DXX_NET_VERSION_MAJOR );
+	PUT_INTEL_SHORT( pBuf+11, DXX_NET_VERSION_MINOR );
+	PUT_INTEL_SHORT( pBuf+13, DXX_NET_VERSION_MICRO );
 	
 	// Send it off
 	return dxx_sendto( UDP_Socket[2], pBuf, iLen, 0, (struct sockaddr *)&TrackerSocket, sizeof( TrackerSocket ) );
@@ -968,6 +987,13 @@ int pass_security_check(ubyte *data, struct _sockaddr sender_addr, int data_len,
 // Connect to a game host and get full info. Eventually we join!
 int net_udp_game_connect(direct_join *dj)
 {
+#ifdef __3DS__
+	extern volatile int d1x_powering_off;
+	if (d1x_powering_off) {
+		dj->connecting = 0;
+		return 0;
+	}
+#endif
 	// Get full game info so we can show it.
 
 	// Timeout after 10 seconds
@@ -1028,10 +1054,104 @@ int net_udp_game_connect(direct_join *dj)
 
 static char *connecting_txt = "Connecting...";
 static char *blank = "";
+static int s_connecting_idx = 6;
+
+#ifdef __3DS__
+static void direct_join_edit_ip(direct_join *dj)
+{
+	osk_opts_t opts;
+	memset(&opts, 0, sizeof(opts));
+	opts.prompt = "Enter Host IP or Hostname";
+	opts.allow_empty = 0;
+	if (osk_modal_loop_ex(dj->addrbuf, sizeof(dj->addrbuf), &opts)) {
+		bottom_direct_ip_reset();
+		bottom_direct_connect_reset();
+		bottom_clear(0);
+		bottom_screen_present();
+	}
+}
+
+static void direct_join_edit_port(char *portbuf, int maxlen, const char *prompt)
+{
+	osk_opts_t opts;
+	memset(&opts, 0, sizeof(opts));
+	opts.prompt = prompt;
+	opts.numeric_only = 1;
+	opts.allow_empty = 0;
+	if (osk_modal_loop_ex(portbuf, maxlen, &opts)) {
+		bottom_direct_ip_reset();
+		bottom_direct_connect_reset();
+		bottom_clear(0);
+		bottom_screen_present();
+	}
+}
+#endif
+
+static int do_direct_connect(newmenu_item *items, direct_join *dj)
+{
+	int sockres = -1;
+
+	net_udp_init(); // yes, redundant call but since the menu does not know any better it would allow any IP entry as long as Netgame-entry looks okay... my head hurts...
+
+	if ((atoi(UDP_MyPort)) <= 1024 || (atoi(UDP_MyPort)) > 65535)
+	{
+		snprintf(UDP_MyPort, sizeof(UDP_MyPort), "%d", UDP_PORT_DEFAULT);
+		nm_messagebox(TXT_ERROR, 1, TXT_OK, "Illegal port");
+		return 1;
+	}
+
+	sockres = udp_open_socket(0, atoi(UDP_MyPort));
+	if (sockres != 0)
+	{
+		return 1;
+	}
+
+	// Resolve address
+	if (udp_dns_filladdr(dj->addrbuf, atoi(dj->portbuf), &dj->host_addr) < 0)
+	{
+		return 1;
+	}
+	else
+	{
+		multi_new_game();
+		net_udp_reset_connection_statuses();
+		N_players = 0;
+		change_playernum_to(1);
+		dj->start_time = timer_query();
+		dj->last_time = 0;
+
+		memcpy((struct _sockaddr *)&Netgame.players[0].protocol.udp.addr, (struct _sockaddr *)&dj->host_addr, sizeof(struct _sockaddr));
+
+		dj->connecting = 1;
+		if (items) items[s_connecting_idx].text = connecting_txt;
+		return 1;
+	}
+}
 
 static int manual_join_game_handler(newmenu *menu, d_event *event, direct_join *dj)
 {
 	newmenu_item *items = newmenu_get_items(menu);
+
+#ifdef __3DS__
+	extern volatile int d1x_powering_off;
+	if (d1x_powering_off) {
+		dj->connecting = 0;
+		if (items) items[s_connecting_idx].text = blank;
+		return 0;
+	}
+
+	u32 kDown = hidKeysDown();
+	if (bottom_direct_ip_tapped()) {
+		direct_join_edit_ip(dj);
+		return 1;
+	}
+	if (bottom_direct_connect_tapped() || (kDown & KEY_START)) {
+		return do_direct_connect(items, dj);
+	}
+	if (event->type == EVENT_WINDOW_DRAW) {
+		bottom_screen_present();
+	}
+#endif
 
 	switch (event->type)
 	{
@@ -1039,7 +1159,7 @@ static int manual_join_game_handler(newmenu *menu, d_event *event, direct_join *
 			if (dj->connecting && event_key_get(event) == KEY_ESC)
 			{
 				dj->connecting = 0;
-				items[6].text = blank;
+				if (items) items[s_connecting_idx].text = blank;
 				return 1;
 			}
 			break;
@@ -1050,55 +1170,35 @@ static int manual_join_game_handler(newmenu *menu, d_event *event, direct_join *
 				if (net_udp_game_connect(dj))
 					return -2;	// Success!
 				else if (!dj->connecting)
-					items[6].text = blank;
+					if (items) items[s_connecting_idx].text = blank;
 			}
 			break;
 
 		case EVENT_NEWMENU_SELECTED:
 		{
-			int sockres = -1;
-
-			net_udp_init(); // yes, redundant call but since the menu does not know any better it would allow any IP entry as long as Netgame-entry looks okay... my head hurts...
-			
-			if ((atoi(UDP_MyPort)) <= 1024 ||(atoi(UDP_MyPort)) > 65535)
-			{
-				snprintf (UDP_MyPort, sizeof(UDP_MyPort), "%d", UDP_PORT_DEFAULT);
-				nm_messagebox(TXT_ERROR, 1, TXT_OK, "Illegal port");
+#ifdef __3DS__
+			int citem = newmenu_get_citem(menu);
+			if (citem == 1) {
+				direct_join_edit_ip(dj);
+				return 1;
+			} else if (citem == 3) {
+				direct_join_edit_port(dj->portbuf, sizeof(dj->portbuf), "Enter Game Port (default: 42424)");
+				return 1;
+			} else if (citem == 5) {
+				direct_join_edit_port(UDP_MyPort, sizeof(UDP_MyPort), "Enter My Port (default: 42424)");
 				return 1;
 			}
-			
-			sockres = udp_open_socket(0, atoi(UDP_MyPort));
-			
-			if (sockres != 0)
-			{
-				return 1;
-			}
-			
-			// Resolve address
-			if (udp_dns_filladdr(dj->addrbuf, atoi(dj->portbuf), &dj->host_addr) < 0)
-			{
-				return 1;
-			}
-			else
-			{
-				multi_new_game();
-				net_udp_reset_connection_statuses();
-				N_players = 0;
-				change_playernum_to(1);
-				dj->start_time = timer_query();
-				dj->last_time = 0;
-				
-				memcpy((struct _sockaddr *)&Netgame.players[0].protocol.udp.addr, (struct _sockaddr *)&dj->host_addr, sizeof(struct _sockaddr));
-				
-				dj->connecting = 1;
-				items[6].text = connecting_txt;
-				return 1;
-			}
-
-			break;
+#endif
+			return do_direct_connect(items, dj);
 		}
 			
 		case EVENT_WINDOW_CLOSE:
+#ifdef __3DS__
+			bottom_direct_ip_reset();
+			bottom_direct_connect_reset();
+			bottom_clear(0);
+			bottom_screen_present();
+#endif
 			if (!Game_wind) // they cancelled
 				net_udp_close();
 			d_free(dj);
@@ -1114,7 +1214,7 @@ static int manual_join_game_handler(newmenu *menu, d_event *event, direct_join *
 void net_udp_manual_join_game()
 {
 	direct_join *dj;
-	newmenu_item m[7];
+	newmenu_item m[9];
 	int nitems = 0;
 
 	MALLOC(dj, direct_join, 1);
@@ -1147,20 +1247,77 @@ void net_udp_manual_join_game()
 	m[nitems].type = NM_TYPE_INPUT; m[nitems].text=dj->portbuf; m[nitems].text_len=5;   	nitems++;
 	m[nitems].type = NM_TYPE_TEXT;  m[nitems].text="MY PORT:";	                    	nitems++;
 	m[nitems].type = NM_TYPE_INPUT; m[nitems].text=UDP_MyPort; m[nitems].text_len=5;	nitems++;
+#ifdef __3DS__
+	m[nitems].type = NM_TYPE_MENU;  m[nitems].text="CONNECT TO HOST";                	nitems++;
+#endif
+	s_connecting_idx = nitems;
 	m[nitems].type = NM_TYPE_TEXT;  m[nitems].text=blank;								nitems++;	// for connecting_txt
 
+#ifdef __3DS__
+	bottom_direct_ip_reset();
+	bottom_direct_connect_reset();
+	bottom_clear(0);
+	bottom_screen_present();
+#endif
+
 	newmenu_do1( NULL, "ENTER GAME ADDRESS", nitems, m, (int (*)(newmenu *, d_event *, void *))manual_join_game_handler, dj, 0 );
+
+#ifdef __3DS__
+	bottom_direct_ip_reset();
+	bottom_direct_connect_reset();
+	bottom_clear(0);
+	bottom_screen_present();
+#endif
 }
 
 static char *ljtext;
 
 int net_udp_list_join_poll( newmenu *menu, d_event *event, direct_join *dj )
 {
+#ifdef __3DS__
+	extern volatile int d1x_powering_off;
+	if (d1x_powering_off) {
+		dj->connecting = 0;
+		return 0;
+	}
+#endif
 	// Polling loop for Join Game menu
 	int i, newpage = 0;
 	static int NLPage = 0;
 	newmenu_item *menus = newmenu_get_items(menu);
 	int citem = newmenu_get_citem(menu);
+
+#ifdef __3DS__
+	u32 kDown = hidKeysDown();
+	if (kDown & (KEY_L | KEY_ZL)) {
+		NLPage--;
+		newpage++;
+		if (NLPage < 0)
+			NLPage = UDP_NETGAMES_PAGES - 1;
+	} else if (kDown & (KEY_R | KEY_ZR)) {
+		NLPage++;
+		newpage++;
+		if (NLPage >= UDP_NETGAMES_PAGES)
+			NLPage = 0;
+	}
+
+	int rescan = bottom_lan_rescan_tapped() || (kDown & KEY_X);
+	if (rescan) {
+		memset(Active_udp_games, 0, sizeof(UDP_netgame_info_lite)*UDP_MAX_NETGAMES);
+		num_active_udp_changed = 1;
+		num_active_udp_games = 0;
+		net_udp_request_game_info(GBcast, 1);
+#ifdef IPv6
+		net_udp_request_game_info(GMcast_v6, 1);
+#endif
+#ifdef USE_TRACKER
+		udp_tracker_reqgames();
+#endif
+	}
+	if (event->type == EVENT_WINDOW_DRAW) {
+		bottom_screen_present();
+	}
+#endif
 
 	switch (event->type)
 	{
@@ -1287,6 +1444,11 @@ int net_udp_list_join_poll( newmenu *menu, d_event *event, direct_join *dj )
 		}
 		case EVENT_WINDOW_CLOSE:
 		{
+#ifdef __3DS__
+			bottom_lan_rescan_reset();
+			bottom_clear(0);
+			bottom_screen_present();
+#endif
 			d_free(ljtext);
 			d_free(menus);
 			d_free(dj);
@@ -1310,6 +1472,12 @@ int net_udp_list_join_poll( newmenu *menu, d_event *event, direct_join *dj )
 		return 0;
 
 	num_active_udp_changed = 0;
+
+#ifdef __3DS__
+	if (menus) {
+		snprintf(menus[0].text, sizeof(char)*74, "  Tap [RESCAN LAN] or (X) to scan.  L/R: Page %d/%d", NLPage + 1, UDP_NETGAMES_PAGES);
+	}
+#endif
 
 	// Copy the active games data into the menu options
 	for (i = 0; i < UDP_NETGAMES_PPAGE; i++)
@@ -1448,12 +1616,21 @@ void net_udp_list_join_game()
 
 	gr_set_fontcolor(BM_XRGB(15,15,23),-1);
 
+#ifdef __3DS__
+	m[0].text = ljtext;
+	m[0].type = NM_TYPE_TEXT;
+	snprintf( m[0].text, sizeof(char)*74, "  Tap [RESCAN LAN] or (X) to scan.  L/R: Page 1/%d", UDP_NETGAMES_PAGES );
+	m[1].text = ljtext + 74*1;
+	m[1].type = NM_TYPE_TEXT;
+	snprintf( m[1].text, sizeof(char)*74, "  Use D-Pad Up/Down to select, (A) to join." );
+#else
 	m[0].text = ljtext;
 	m[0].type = NM_TYPE_TEXT;
 	snprintf( m[0].text, sizeof(char)*74, "\tF4/F5/F6: (Re)Scan for all/LAN/Tracker Games." );
 	m[1].text = ljtext + 74*1;
 	m[1].type = NM_TYPE_TEXT;
 	snprintf( m[1].text, sizeof(char)*74, "\tPgUp/PgDn: Flip Pages." );
+#endif
 	m[2].text = ljtext + 74*2;
 	m[2].type = NM_TYPE_TEXT;
 	snprintf( m[2].text, sizeof(char)*74, " " );
@@ -1467,8 +1644,20 @@ void net_udp_list_join_game()
 		snprintf(m[i+4].text,sizeof(char)*74,"%d.                                                                      ", i+1);
 	}
 
+#ifdef __3DS__
+	bottom_lan_rescan_reset();
+	bottom_clear(0);
+	bottom_screen_present();
+#endif
+
 	num_active_udp_changed = 1;
 	newmenu_dotiny("NETGAMES", NULL,(UDP_NETGAMES_PPAGE+4), m, 1, (int (*)(newmenu *, d_event *, void *))net_udp_list_join_poll, dj);
+
+#ifdef __3DS__
+	bottom_lan_rescan_reset();
+	bottom_clear(0);
+	bottom_screen_present();
+#endif
 }
 
 int color_used(int wingcolor, int missilecolor, int ignore) {
@@ -2694,9 +2883,9 @@ void net_udp_send_version_deny(struct _sockaddr sender_addr)
 	ubyte buf[UPID_VERSION_DENY_SIZE];
 	
 	buf[0] = UPID_VERSION_DENY;
-	PUT_INTEL_SHORT(buf + 1, DXX_VERSION_MAJORi);
-	PUT_INTEL_SHORT(buf + 3, DXX_VERSION_MINORi);
-	PUT_INTEL_SHORT(buf + 5, DXX_VERSION_MICROi);
+	PUT_INTEL_SHORT(buf + 1, DXX_NET_VERSION_MAJOR);
+	PUT_INTEL_SHORT(buf + 3, DXX_NET_VERSION_MINOR);
+	PUT_INTEL_SHORT(buf + 5, DXX_NET_VERSION_MICRO);
 	PUT_INTEL_SHORT(buf + 7, MULTI_PROTO_VERSION);
 	
 	dxx_sendto (UDP_Socket[0], buf, sizeof(buf), 0, (struct sockaddr *)&sender_addr, sizeof(struct _sockaddr));
@@ -2717,9 +2906,9 @@ void net_udp_request_game_info(struct _sockaddr game_addr, int lite)
 	
 	buf[0] = (lite?UPID_GAME_INFO_LITE_REQ:UPID_GAME_INFO_REQ);
 	memcpy(&(buf[1]), UDP_REQ_ID, 4);
-	PUT_INTEL_SHORT(buf + 5, DXX_VERSION_MAJORi);
-	PUT_INTEL_SHORT(buf + 7, DXX_VERSION_MINORi);
-	PUT_INTEL_SHORT(buf + 9, DXX_VERSION_MICROi);
+	PUT_INTEL_SHORT(buf + 5, DXX_NET_VERSION_MAJOR);
+	PUT_INTEL_SHORT(buf + 7, DXX_NET_VERSION_MINOR);
+	PUT_INTEL_SHORT(buf + 9, DXX_NET_VERSION_MICRO);
 	if (!lite)
 		PUT_INTEL_SHORT(buf + 11, MULTI_PROTO_VERSION);
 	
@@ -2742,7 +2931,11 @@ int net_udp_check_game_info_request(ubyte *data, int lite)
 	if (memcmp(&sender_id, UDP_REQ_ID, 4))
 		return 0;
 	
-	if ((sender_iver[0] != DXX_VERSION_MAJORi) || (sender_iver[1] != DXX_VERSION_MINORi) || (sender_iver[2] != DXX_VERSION_MICROi) || (!lite && sender_iver[3] != MULTI_PROTO_VERSION))
+	int ver_match = ((sender_iver[0] == DXX_NET_VERSION_MAJOR && sender_iver[1] == DXX_NET_VERSION_MINOR && sender_iver[2] == DXX_NET_VERSION_MICRO) ||
+	                 (sender_iver[0] == 0 && sender_iver[1] == 58 && sender_iver[2] == 1) ||
+	                 (sender_iver[0] == DXX_VERSION_MAJORi && sender_iver[1] == DXX_VERSION_MINORi && sender_iver[2] == DXX_VERSION_MICROi));
+
+	if (!ver_match || (!lite && sender_iver[3] != MULTI_PROTO_VERSION))
 		return -1;
 		
 	return 1;
@@ -2776,9 +2969,9 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		memset(buf, 0, sizeof(buf));
 		
 		buf[0] = info_upid;								len++;
-		PUT_INTEL_SHORT(buf + len, DXX_VERSION_MAJORi); 						len += 2;
-		PUT_INTEL_SHORT(buf + len, DXX_VERSION_MINORi); 						len += 2;
-		PUT_INTEL_SHORT(buf + len, DXX_VERSION_MICROi); 						len += 2;
+		PUT_INTEL_SHORT(buf + len, DXX_NET_VERSION_MAJOR); 						len += 2;
+		PUT_INTEL_SHORT(buf + len, DXX_NET_VERSION_MINOR); 						len += 2;
+		PUT_INTEL_SHORT(buf + len, DXX_NET_VERSION_MICRO); 						len += 2;
 		PUT_INTEL_INT(buf + len, Netgame.protocol.udp.GameID);				len += 4;
 		memcpy(&(buf[len]), Netgame.game_name, NETGAME_NAME_LEN+1);			len += (NETGAME_NAME_LEN+1);
 		memcpy(&(buf[len]), Netgame.mission_title, MISSION_NAME_LEN+1);			len += (MISSION_NAME_LEN+1);
@@ -2812,9 +3005,9 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		memset(buf, 0, sizeof(buf));
 
 		buf[0] = info_upid;								len++;
-		PUT_INTEL_SHORT(buf + len, DXX_VERSION_MAJORi); 						len += 2;
-		PUT_INTEL_SHORT(buf + len, DXX_VERSION_MINORi); 						len += 2;
-		PUT_INTEL_SHORT(buf + len, DXX_VERSION_MICROi); 						len += 2;
+		PUT_INTEL_SHORT(buf + len, DXX_NET_VERSION_MAJOR); 						len += 2;
+		PUT_INTEL_SHORT(buf + len, DXX_NET_VERSION_MINOR); 						len += 2;
+		PUT_INTEL_SHORT(buf + len, DXX_NET_VERSION_MICRO); 						len += 2;
 		//PUT_INTEL_INT(buf + len, Netgame.protocol.udp.GameID);				len += 4;
 		int to_player = -1; 
 		for (i = 0; i < MAX_PLAYERS+4; i++)
@@ -2991,7 +3184,11 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		recv_game.program_iver[1] = GET_INTEL_SHORT(&(data[len]));			len += 2;
 		recv_game.program_iver[2] = GET_INTEL_SHORT(&(data[len]));			len += 2;
 		
-		if ((recv_game.program_iver[0] != DXX_VERSION_MAJORi) || (recv_game.program_iver[1] != DXX_VERSION_MINORi) || (recv_game.program_iver[2] != DXX_VERSION_MICROi))
+		int ver_match = ((recv_game.program_iver[0] == DXX_NET_VERSION_MAJOR && recv_game.program_iver[1] == DXX_NET_VERSION_MINOR && recv_game.program_iver[2] == DXX_NET_VERSION_MICRO) ||
+		                 (recv_game.program_iver[0] == 0 && recv_game.program_iver[1] == 58 && recv_game.program_iver[2] == 1) ||
+		                 (recv_game.program_iver[0] == DXX_VERSION_MAJORi && recv_game.program_iver[1] == DXX_VERSION_MINORi && recv_game.program_iver[2] == DXX_VERSION_MICROi));
+
+		if (!ver_match)
 			return 0;
 
 		recv_game.GameID = GET_INTEL_INT(&(data[len]));					len += 4;
@@ -3527,6 +3724,22 @@ int net_udp_start_poll( newmenu *menu, d_event *event, void *userdata )
 	newmenu_item *menus = newmenu_get_items(menu);
 	int nitems = newmenu_get_nitems(menu);
 	int i,n,nm;
+	(void)nitems;
+
+#ifdef __3DS__
+	u32 kDown = hidKeysDown();
+	if (kDown & KEY_START) {
+		newmenu_close(menu, 0);
+		return 1;
+	}
+	if (event->type == EVENT_WINDOW_DRAW) {
+		if (bottom_netgame_start_tapped(N_players >= 1)) {
+			newmenu_close(menu, 0);
+			return 1;
+		}
+		bottom_screen_present();
+	}
+#endif
 
 	if (event->type != EVENT_WINDOW_DRAW)
 		return 0;
@@ -3539,14 +3752,14 @@ int net_udp_start_poll( newmenu *menu, d_event *event, void *userdata )
 			menus[0].value = 1;
 	}
 
-	for (i=1; i<nitems; i++ ) {
+	for (i=1; i<MAX_PLAYERS; i++ ) {
 		if ( (i>= N_players) && (menus[i].value) ) {
 			menus[i].value = 0;
 		}
 	}
 
 	nm = 0;
-	for (i=0; i<nitems; i++ ) {
+	for (i=0; i<MAX_PLAYERS; i++ ) {
 		if ( menus[i].value ) {
 			nm++;
 			if ( nm > N_players ) {
@@ -4544,10 +4757,10 @@ menu:
 int
 net_udp_select_players(void)
 {
-        int i, j, opts, opt_msg;
-        newmenu_item m[MAX_PLAYERS+1];
+        int i, j, opts, opt_msg, opt_start;
+        newmenu_item m[MAX_PLAYERS+3];
 	char text[MAX_PLAYERS][45];
-	char title[50];
+	char title[100];
 	int save_nplayers;
 
 	net_udp_add_player( &UDP_Seq );
@@ -4556,11 +4769,13 @@ net_udp_select_players(void)
 		sprintf( text[i], "%d.  %-20s", i+1, "" );
 		m[i].type = NM_TYPE_CHECK; m[i].text = text[i]; m[i].value = 0;
 	}
-//added/edited on 11/7/98 by Victor Rachels in an attempt to get msgs going.
-        opts=MAX_PLAYERS;
+
+        opts = MAX_PLAYERS;
+        m[opts].type = NM_TYPE_TEXT; m[opts].text = ""; opts++;
+        opt_start = opts;
+        m[opts].type = NM_TYPE_MENU; m[opts].text = "START GAME"; opts++;
         opt_msg = opts;
-//killed for now to not raise people's hopes - 11/10/98 - VR
-//        m[opts].type = NM_TYPE_MENU; m[opts].text = "Send message..."; opts++;
+        (void)opt_start;
 
 	m[0].value = 1;                         // Assume server will play...
 
@@ -4568,12 +4783,22 @@ net_udp_select_players(void)
 		sprintf( text[0], "%d. %-20s", 1, Players[Player_num].callsign );
 	else
 		sprintf( text[0], "%d. %s%-20s", 1, RankStrings[Netgame.players[Player_num].rank],Players[Player_num].callsign );
+
+#ifdef __3DS__
+	sprintf( title, "%s %d players\nPress START or tap below to begin.", TXT_TEAM_SELECT, Netgame.max_numplayers );
+#else
 	sprintf( title, "%s %d %s", TXT_TEAM_SELECT, Netgame.max_numplayers, TXT_TEAM_PRESS_ENTER );
+#endif
 
 GetPlayersAgain:
 #ifdef USE_TRACKER
 	if( Netgame.Tracker )
 		udp_tracker_register();
+#endif
+#ifdef __3DS__
+	bottom_netgame_start_reset();
+	bottom_clear(0);
+	bottom_screen_present();
 #endif
 
         j=opt_msg;
@@ -4601,6 +4826,11 @@ GetPlayersAgain:
 			udp_tracker_unregister();
 #endif
 abort:
+#ifdef __3DS__
+		bottom_netgame_start_reset();
+		bottom_clear(0);
+		bottom_screen_present();
+#endif
 		// Tell everyone we're bailing
 		Netgame.numplayers = 0;
 		for (i=1; i<save_nplayers; i++) {
@@ -4678,6 +4908,12 @@ abort:
 	if (Netgame.gamemode == NETGAME_TEAM_ANARCHY)
 		if (!net_udp_select_teams())
 			goto abort;
+
+#ifdef __3DS__
+	bottom_netgame_start_reset();
+	bottom_clear(0);
+	bottom_screen_present();
+#endif
 
 	return(1);
 }
@@ -4988,6 +5224,11 @@ void net_udp_flush()
 
 void net_udp_listen()
 {
+#ifdef __3DS__
+	extern volatile int d1x_powering_off;
+	if (d1x_powering_off)
+		return;
+#endif
 	int size;
 	ubyte packet[UPID_MAX_SIZE];
 	struct _sockaddr sender_addr;

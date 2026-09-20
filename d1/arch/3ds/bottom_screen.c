@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <GL/picaGL.h>   /* pglIsPoweredOff — bail bottom-screen flush on power-off */
 #include "bottom_screen.h"
+#include "game.h"
 #include "gamefont.h"   /* GAME_FONT / Gamefonts[] — real Descent font for labels */
 #include "gr.h"         /* grs_bitmap, gr_palette (6-bit), SWIDTH/SHEIGHT */
 #include "pcx.h"        /* pcx_read_bitmap — load the marbled popup background */
@@ -1001,6 +1002,125 @@ void bottom_demo_delete_reset(void)
 	g_demo_del_btn_prev = 0;
 }
 
+/* Netgame lobby "START NETGAME" button.
+ * Shown while waiting for players in net_udp_select_players().
+ * Returns 1 on a fresh tap to start the game. */
+static int g_net_start_btn_prev = 0;
+static int g_net_start_btn_state = -1;
+static int g_net_start_btn_bbox[4] = {-1,-1,-1,-1};
+static const int NET_START_BX = 40, NET_START_BY = 190, NET_START_BW = 240, NET_START_BH = 38;
+
+int bottom_netgame_start_tapped(int enable)
+{
+	if (enable != g_net_start_btn_state) {
+		g_net_start_btn_state = enable;
+		draw_key(NET_START_BX, NET_START_BY, NET_START_BW, NET_START_BH,
+		         enable ? BTN_BLUE : BTN_GREY,
+		         enable ? "START NETGAME" : "WAITING FOR PLAYERS", g_net_start_btn_bbox);
+	}
+
+	/* Edge-triggered tap test. */
+	touchPosition t;
+	hidTouchRead(&t);
+	int held = (hidKeysHeld() & KEY_TOUCH) && bottom_hit(NET_START_BX, NET_START_BY, NET_START_BW, NET_START_BH, &t);
+	int tapped = held && !g_net_start_btn_prev;
+	g_net_start_btn_prev = held;
+
+	return (enable && tapped) ? 1 : 0;
+}
+
+void bottom_netgame_start_reset(void)
+{
+	g_net_start_btn_state = -1;
+	g_net_start_btn_prev = 0;
+}
+
+/* LAN browser "RESCAN LAN" button.
+ * Shown while browsing LAN games in net_udp_list_join_game().
+ * Returns 1 on a fresh tap to trigger rescan. */
+static int g_lan_rescan_btn_prev = 0;
+static int g_lan_rescan_btn_state = -1;
+static int g_lan_rescan_btn_bbox[4] = {-1,-1,-1,-1};
+static const int RESCAN_BX = 50, RESCAN_BY = 188, RESCAN_BW = 220, RESCAN_BH = 38;
+
+int bottom_lan_rescan_tapped(void)
+{
+	if (g_lan_rescan_btn_state != 1) {
+		g_lan_rescan_btn_state = 1;
+		draw_key(RESCAN_BX, RESCAN_BY, RESCAN_BW, RESCAN_BH, BTN_BLUE, "RESCAN LAN", g_lan_rescan_btn_bbox);
+	}
+
+	touchPosition t;
+	hidTouchRead(&t);
+	int held = (hidKeysHeld() & KEY_TOUCH) && bottom_hit(RESCAN_BX, RESCAN_BY, RESCAN_BW, RESCAN_BH, &t);
+	int tapped = held && !g_lan_rescan_btn_prev;
+	g_lan_rescan_btn_prev = held;
+
+	return tapped ? 1 : 0;
+}
+
+void bottom_lan_rescan_reset(void)
+{
+	g_lan_rescan_btn_state = -1;
+	g_lan_rescan_btn_prev = 0;
+}
+
+/* Direct Join "ENTER IP ADDRESS" button. */
+static int g_direct_ip_btn_prev = 0;
+static int g_direct_ip_btn_state = -1;
+static int g_direct_ip_btn_bbox[4] = {-1,-1,-1,-1};
+static const int DIP_BX = 40, DIP_BY = 138, DIP_BW = 240, DIP_BH = 40;
+
+int bottom_direct_ip_tapped(void)
+{
+	if (g_direct_ip_btn_state != 1) {
+		g_direct_ip_btn_state = 1;
+		draw_key(DIP_BX, DIP_BY, DIP_BW, DIP_BH, BTN_BLUE, "ENTER IP ADDRESS", g_direct_ip_btn_bbox);
+	}
+
+	touchPosition t;
+	hidTouchRead(&t);
+	int held = (hidKeysHeld() & KEY_TOUCH) && bottom_hit(DIP_BX, DIP_BY, DIP_BW, DIP_BH, &t);
+	int tapped = held && !g_direct_ip_btn_prev;
+	g_direct_ip_btn_prev = held;
+
+	return tapped ? 1 : 0;
+}
+
+void bottom_direct_ip_reset(void)
+{
+	g_direct_ip_btn_state = -1;
+	g_direct_ip_btn_prev = 0;
+}
+
+/* Direct Join "CONNECT" button. */
+static int g_direct_conn_btn_prev = 0;
+static int g_direct_conn_btn_state = -1;
+static int g_direct_conn_btn_bbox[4] = {-1,-1,-1,-1};
+static const int DCONN_BX = 40, DCONN_BY = 188, DCONN_BW = 240, DCONN_BH = 40;
+
+int bottom_direct_connect_tapped(void)
+{
+	if (g_direct_conn_btn_state != 1) {
+		g_direct_conn_btn_state = 1;
+		draw_key(DCONN_BX, DCONN_BY, DCONN_BW, DCONN_BH, BTN_BLUE, "CONNECT", g_direct_conn_btn_bbox);
+	}
+
+	touchPosition t;
+	hidTouchRead(&t);
+	int held = (hidKeysHeld() & KEY_TOUCH) && bottom_hit(DCONN_BX, DCONN_BY, DCONN_BW, DCONN_BH, &t);
+	int tapped = held && !g_direct_conn_btn_prev;
+	g_direct_conn_btn_prev = held;
+
+	return tapped ? 1 : 0;
+}
+
+void bottom_direct_connect_reset(void)
+{
+	g_direct_conn_btn_state = -1;
+	g_direct_conn_btn_prev = 0;
+}
+
 /* In-game "MENU" button (bottom-center). Shown persistently while a game is
  * running so the player can open the in-game PAUSE menu (where Save/Load/
  * Options/Resume live) — the 3DS has no ESC/PAUSE key. The caller taps this
@@ -1041,9 +1161,11 @@ static int g_save_btn_bbox[4] = {-1,-1,-1,-1};
 static const int SAV_BX = 8, SAV_BY = BOT_BY, SAV_BW = 96, SAV_BH = BOT_BH;
 int bottom_save_tapped(void)
 {
-	if (g_save_btn_state != 1) {
-		g_save_btn_state = 1;
-		draw_key(SAV_BX, SAV_BY, SAV_BW, SAV_BH, BTN_BLUE, "SAVE", g_save_btn_bbox);
+	int is_multi = (Game_mode & GM_MULTI) ? 1 : 0;
+	int target_state = is_multi ? 2 : 1;
+	if (g_save_btn_state != target_state) {
+		g_save_btn_state = target_state;
+		draw_key(SAV_BX, SAV_BY, SAV_BW, SAV_BH, BTN_BLUE, is_multi ? "SCORE" : "SAVE", g_save_btn_bbox);
 	}
 
 	touchPosition t;
@@ -1263,4 +1385,12 @@ static inline int bottom_pri_tapped(void) { return 0; }
 static inline void bottom_pri_reset(void) {}
 static inline int bottom_sec_tapped(void) { return 0; }
 static inline void bottom_sec_reset(void) {}
+static inline int bottom_netgame_start_tapped(int enable) { (void)enable; return 0; }
+static inline void bottom_netgame_start_reset(void) {}
+static inline int bottom_lan_rescan_tapped(void) { return 0; }
+static inline void bottom_lan_rescan_reset(void) {}
+static inline int bottom_direct_ip_tapped(void) { return 0; }
+static inline void bottom_direct_ip_reset(void) {}
+static inline int bottom_direct_connect_tapped(void) { return 0; }
+static inline void bottom_direct_connect_reset(void) {}
 #endif
