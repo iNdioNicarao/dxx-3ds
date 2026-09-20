@@ -25,7 +25,7 @@
 ## Downloads
 
 * `d1x-3ds-2.1.1.cia` — install via FBI / title manager (recommended for 3DS Home Menu)
-* `d1x-3ds.3dsx` — run directly via the Homebrew Launcher
+* `d1x-3ds-2.1.1.3dsx` / `d1x-3ds.3dsx` — run directly via the Homebrew Launcher
 
 **Title ID**: `0x000400000FDDEB97`
 
