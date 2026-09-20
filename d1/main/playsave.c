@@ -115,7 +115,7 @@ int new_player_config()
 	PlayerCfg.SelectAfterFire = 1;  /* SelectAfterFire */
 	PlayerCfg.VulcanAmmoWarnings = 1; 
 	PlayerCfg.ShieldWarnings = 0; 
-	PlayerCfg.AutoDemo = 1; 
+	PlayerCfg.AutoDemo = 0; 
 	PlayerCfg.ShowCustomColors = 1; 
 	PlayerCfg.QuietPlasma = 1; 
 	PlayerCfg.maxFps = GameArg.SysMaxFPS; 

@@ -551,6 +551,13 @@ window *newmenu_get_window(newmenu *menu)
 	return menu->wind;
 }
 
+void newmenu_close(newmenu *menu, int rval)
+{
+	if (menu->rval)
+		*menu->rval = rval;
+	window_close(menu->wind);
+}
+
 void newmenu_scroll(newmenu *menu, int amount)
 {
 	int i = 0, first = 0, last = 0;

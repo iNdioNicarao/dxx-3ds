@@ -33,9 +33,14 @@ char copyright[] = "DESCENT   COPYRIGHT (C) 1994,1995 PARALLAX SOFTWARE CORPORAT
 
 #ifdef __3DS__
 #include <3ds.h>
+#include <malloc.h>
 #include "bottom_screen.h"
 extern volatile int d1x_powering_off;
 extern void pglSetPoweredOff(void);
+
+#ifdef USE_UDP
+static u32 *soc_buffer = NULL;
+#endif
 
 const unsigned int __stacksize__ = 8 * 1024 * 1024; // 8MB
 
@@ -326,6 +331,16 @@ int main(int argc, char *argv[])
 	bottom_screen_init();
 
 	osSetSpeedupEnable(1);
+
+#ifdef USE_UDP
+	soc_buffer = (u32*)memalign(0x1000, 0x100000);
+	if (soc_buffer) {
+		if (R_FAILED(socInit(soc_buffer, 0x100000))) {
+			free(soc_buffer);
+			soc_buffer = NULL;
+		}
+	}
+#endif
 #endif
 	mem_init();
 #if defined(__LINUX__) || defined(__APPLE__)
@@ -510,7 +525,9 @@ int main(int argc, char *argv[])
 #endif
 	{
 		event_process();
+#ifdef __3DS__
 		bottom_screen_present();   /* draw/swap bottom screen (mode state machine) */
+#endif
 	}
 
 #ifdef __3DS__
@@ -525,6 +542,16 @@ int main(int argc, char *argv[])
 	// so it cannot break game-start stereo the way stopping audio in the APT
 	// hook did. The APT hook + main/modal loop bails mean no game action runs
 	// after the power press, so nothing else pokes the GPU.
+#ifdef USE_UDP
+	if (soc_buffer) {
+		extern void net_udp_close(void);
+		net_udp_close();
+		SOCU_ShutdownSockets();
+		socExit();
+		free(soc_buffer);
+		soc_buffer = NULL;
+	}
+#endif
 	if (!GameArg.SndNoSound)
 		digi_close();
 	pglSetPoweredOff();

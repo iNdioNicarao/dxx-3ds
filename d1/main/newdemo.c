@@ -80,10 +80,12 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "physfsx.h"
 #include "console.h"
 #include "playsave.h"
+#ifdef __3DS__
 #include "osk.h"   /* 3DS on-screen keyboard for demo save-as name */
 #include "bottom_screen.h"  /* bottom_screen_reacquire() after swkbd */
-#include "texmerge.h"  /* texmerge_flush() after swkbd (wall cache recovery) */
 #include <GL/picaGL.h>      /* pglReacquire()/pglTextureReset() after swkbd (GPU state recovery) */
+#endif
+#include "texmerge.h"  /* texmerge_flush() after swkbd (wall cache recovery) */
 #include "ogl_init.h"      /* ogl_invalidate_textures() after swkbd */
 
 #ifdef EDITOR

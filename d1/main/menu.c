@@ -43,10 +43,12 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "timer.h"
 #include "sounds.h"
 #include "gameseq.h"
+#ifdef __3DS__
 #include "osk.h"   /* 3DS on-screen keyboard for pilot name entry */
 #include "bottom_screen.h" /* 3DS bottom-screen UI (pilot delete button) */
-#include "texmerge.h"      /* texmerge_flush() — wall-cache recovery after swkbd */
 #include <GL/picaGL.h>     /* pglReacquire() — GPU recovery after swkbd */
+#endif
+#include "texmerge.h"      /* texmerge_flush() — wall-cache recovery after swkbd */
 #include "text.h"
 #include "gamefont.h"
 #include "newmenu.h"

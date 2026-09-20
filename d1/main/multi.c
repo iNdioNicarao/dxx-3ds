@@ -16,6 +16,8 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
  *
  */
 
+#include <stdbool.h>
+
 int Current_obs_player = 0;
 bool Obs_at_distance = 0;
 

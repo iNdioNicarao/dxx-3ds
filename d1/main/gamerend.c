@@ -144,6 +144,8 @@ void benchmark_toggle(void)
 		con_printf(CON_URGENT, "BENCHMARK STOP\n");
 	}
 }
+#else
+int benchmark_active = 0;
 #endif
 
 #ifdef NETWORK
@@ -959,6 +961,7 @@ void game_render_frame()
  * resume (stereo_hw_on reset), and the slider position is preserved. */
 void stereo_suspend(void)
 {
+#ifdef __3DS__
 	/* Force stereo OFF so any menu/overlay opened over a live game presents
 	 * in mono on the top screen. The stereo eye-pair path (when the 3D
 	 * slider was up) leaves g_stereo_active=1 AND the display bank on
@@ -977,10 +980,12 @@ void stereo_suspend(void)
 	stereo_hw_on = 0;
 	g_stereo_active = 0;
 	pglSelectScreen(0/*GFX_TOP*/, 0/*GFX_LEFT*/);
+#endif
 }
 
 void stereo_resume(void)
 {
+#ifdef __3DS__
 	/* Let game_render_frame_mono's per-frame slider logic re-engage stereo:
 	 * reset the hardware-on flag so the next gameplay frame re-reads the
 	 * physical slider and re-issues gfxSet3D/pglSetStereo if it is still up.
@@ -1001,6 +1006,7 @@ void stereo_resume(void)
 	stereo_hw_on = 0;
 	g_stereo_active = 0;
 	pglSelectScreen(0/*GFX_TOP*/, 0/*GFX_LEFT*/);
+#endif
 }
 
 //show a message in a nice little box

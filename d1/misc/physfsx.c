@@ -11,7 +11,7 @@
 #if defined(__MACH__) && defined(__APPLE__)
 #include <sys/mount.h>
 #include <unistd.h>	// for chdir hack
-#include <HIServices/Processes.h>
+#include <ApplicationServices/ApplicationServices.h>
 #endif
 
 #include "physfsx.h"
@@ -39,11 +39,27 @@ void PHYSFSX_init(int argc, char *argv[])
 	PHYSFS_setWriteDir(PHYSFS_getBaseDir());
 	InitArgs( argc,argv );
 
+	if (GameArg.SysHogDir != NULL)
+		PHYSFS_addToSearchPath(GameArg.SysHogDir, 0);
+
+#if (defined(__APPLE__) && defined(__MACH__)) || defined(macintosh)
+	{
+		char resdir[PATH_MAX];
+		snprintf(resdir, sizeof(resdir), "%sContents/Resources", PHYSFS_getBaseDir());
+		PHYSFS_addToSearchPath(resdir, 0);
+	}
+#endif
+
 	// Add hog file
 	memset(hog, '\x00', PATH_MAX);
-	strcpy(hog, PHYSFS_getBaseDir());
-	strcat(hog, "descent.hog");
-	PHYSFS_addToSearchPath(hog, 0);
+	if (PHYSFSX_getRealPath("descent.hog", hog))
+		PHYSFS_addToSearchPath(hog, 0);
+	else
+	{
+		strcpy(hog, PHYSFS_getBaseDir());
+		strcat(hog, "descent.hog");
+		PHYSFS_addToSearchPath(hog, 0);
+	}
 }
 
 // Add a searchpath, but that searchpath is relative to an existing searchpath

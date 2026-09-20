@@ -39,7 +39,9 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "menu.h"
 #include "screens.h"
 #include "textures.h"
+#ifdef __3DS__
 #include "bottom_screen.h"	/* bottom_blit_canvas_region / bottom_clear_rect (3DS minimap) */
+#endif
 #include "wall.h"		/* WALL_IS_DOORWAY / WID_FLY_FLAG (minimap door coloring) */
 #include "mouse.h"
 #include "timer.h"

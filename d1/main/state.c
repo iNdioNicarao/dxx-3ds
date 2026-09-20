@@ -40,8 +40,10 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "key.h"
 #include "piggy.h"
 #include "texmerge.h"
+#ifdef __3DS__
 #include <GL/picaGL.h>   /* pglTextureReset() after save-menu (wall cache recovery) */
 #include "bottom_screen.h" /* bottom_screen_reacquire() after swkbd (framebuffer rebind) */
+#endif
 #include "player.h"
 #include "cntrlcen.h"
 #include "morph.h"
@@ -61,7 +63,9 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "args.h"
 #include "ai.h"
 #include "state.h"
+#ifdef __3DS__
 #include "osk.h"   /* 3DS software keyboard for save-game name entry */
+#endif
 #include "multi.h"
 #include "gr.h"
 #ifdef OGL

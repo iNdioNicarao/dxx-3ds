@@ -32,7 +32,7 @@ APP_DESCRIPTION := Port of DXX-Rebirth to 3DS
 APP_AUTHOR		:= El iNdioNicarao
 VER_MAJOR	:=	2
 VER_MINOR	:=	1
-VER_MICRO			:=	1
+VER_MICRO			:=	2
 APP_VERSION	:=	$(VER_MAJOR).$(VER_MINOR).$(VER_MICRO)
 
 
@@ -55,7 +55,7 @@ CFLAGS += -fsigned-char	$(INCLUDE) -D__3DS__ -DNDEBUG -DRELEASE -DNO_ASM -DUSE_S
 			-DMAXIMUM_FPS=60 -DHAVE_STRUCT_TIMEVAL -DHAVE_STRUCT_TIMESPEC \
 			-Wno-deprecated-declarations -fno-short-enums
 
-CFLAGS += -fsigned-char  $(INCLUDE) -DARM11 -D_3DS -DOGL -DOGLES -DCROSSHAIR
+CFLAGS += -fsigned-char  $(INCLUDE) -DARM11 -D_3DS -DOGL -DOGLES -DCROSSHAIR -DNETWORK -DUSE_UDP
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 

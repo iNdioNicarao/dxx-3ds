@@ -69,7 +69,9 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "newmenu.h"
 #include "game.h"
 #include "menu.h"
+#ifdef __3DS__
 #include "bottom_screen.h" /* 3DS bottom-screen in-game UI (MENU/SAVE/REC + top-row buttons) */
+#endif
 #include "gamefont.h"
 #include "endlevel.h"
 #include "config.h"

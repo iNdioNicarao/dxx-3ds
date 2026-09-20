@@ -29,6 +29,28 @@ of the original engine by Parallax Software.
 [`docs/STEREO_3D.md`](docs/STEREO_3D.md); the developer-side trace of that
 code lives in [`docs/stereo-3d-logic-map.md`](docs/stereo-3d-logic-map.md).
 
+## What's new in v2.1.2
+
+This release introduces the **Complete 3DS Multiplayer Touchscreen Suite**, the **Roland SC-55 Soundtrack Jukebox**, comprehensive **Menu System Streamlining**, and extensive **Touchscreen Keyboard (swkbd) Usability**:
+
+- **Complete 3DS Multiplayer Touchscreen Suite (UDP / Wi-Fi)**:
+  - **Lobby Start Instant Launch**: Added a prominent top-screen `"START GAME"` menu option, enabled instant game start via the physical `START` button, and added a dedicated `[ START NETGAME ]` touch button on the bottom screen.
+  - **LAN Game Browser Polish**: Added a bottom-screen `[ RESCAN LAN ]` button and mapped physical `(X)` as an instant rescan shortcut so players can discover hosted games without backing out of the menu. Added `L` / `R` bumper page navigation with dynamic `Page X/Y` counters.
+  - **Direct Join via On-Screen Keyboard (`swkbd`)**: Fully integrated Nintendo 3DS software keyboard (`swkbd`) for typing host IP addresses and custom ports with the stylus, complete with bottom-screen `[ ENTER IP ADDRESS ]` and `[ CONNECT ]` buttons, a `CONNECT TO HOST` menu item, and `START` button shortcut.
+  - **In-Game Multiplayer Scoreboard**: During multiplayer matches (`Game_mode & GM_MULTI`), the inactive bottom-screen `[ SAVE ]` button automatically transforms into a context-aware `[ SCORE ]` button, cycling the kill matrix / scoreboard overlay (`OFF` -> `Kills` -> `Deaths` -> `Team`, PC `F7`) with real-time HUD status messages.
+  - **AutoDemo Storage Protection**: Disabled automatic multiplayer demo recording by default (`PlayerCfg.AutoDemo = 0`) to prevent matches from inadvertently consuming SD card storage space.
+- **Roland SC-55 Soundtrack Jukebox Feature**:
+  - Dedicated **Soundtrack Jukebox** interface (`OPTIONS -> SOUND EFFECTS & MUSIC -> SOUNDTRACK JUKEBOX...`) to preview and play all 27 canonical Roland SC-55 tracks composed by Brian Luzietti, Jim Hammer, Larry Peacock, and Tim Clarke.
+  - **Three Playback Modes**: Loop Track, Sequential, and Shuffle Play.
+  - **In-Game Music Override**: Playing a track in the Jukebox allows the music to continue playing uninterrupted during live gameplay exploration.
+  - **Thread-Safe Architecture**: Deferred audio polling on the main thread and zero-I/O RAM preloading eliminates audio glitches and SD card contention.
+- **Menu Hazard Elimination & Graphics Fixes**:
+  - **Permanent Graphics Options Fix**: Excised display context destruction (`gr_set_mode` / `pglInit`) on menu exit, completely eliminating the long-standing bug where exiting graphics settings corrupted textures, wall faces, and HUD icons.
+  - **Excised PC Relics & Crash Hazards**: Removed desktop PC resolution/aspect-ratio selectors that triggered GPU lockups, forced joystick input permanently ON to prevent navigation lockout, and purged obsolete PC 101-key remapping grids and DOS Redbook CD menus.
+- **Touchscreen Keyboard & Management Across Menus**:
+  - Native 3DS software keyboard (`swkbd`) integrated across pilot creation, demo recording save prompts, and savegame slot renaming.
+  - Added bottom-screen touch buttons for `[ DELETE PILOT ]`, `[ DELETE DEMO ]`, and high-scores `[ RESET SCORES ]`.
+
 ---
 
 ## What's new in v2.1.1
@@ -334,9 +356,9 @@ Outputs: `d1/d1x-3ds.3dsx`, `d1/d1x-3ds.elf`,
 
 This port was developed by **Dennis Isaac Gutierrez Zeledon** with the assistance of AI coding assistants across its development milestones:
 
-- **v2.0.7 – v2.1.1 (Tri-View Tactical Dashboard, Gyro Aim Assist, SC-55 Audio, Save System & Performance Overhaul):**
+- **v2.0.7 – v2.1.2 (Tri-View Tactical Dashboard, Gyro Aim Assist, Roland SC-55 Jukebox, Multiplayer Touchscreen Suite, Save Thumbnails & Performance Overhaul):**
   - **Assistant:** **Gemini Antigravity** (Google DeepMind)
-  - **Role:** Implementation of the live Tri-View bottom-screen dashboard (3D live rear-view mirror, tactical sweep radar, and wireframe minimap), hardware-calibrated gyroscope aim assist with dedicated options menu, save game screenshot thumbnail system, mid-game menu lifecycle resolution, stereo depth clamping and transitions, 24-bit color dithering, bilinear filtering, 30 FPS decoupled rear-view mirror cadence, SD diagnostic bottleneck elimination, and release hardening.
+  - **Role:** Implementation of the live Tri-View bottom-screen dashboard (3D live rear-view mirror, tactical sweep radar, and wireframe minimap), hardware-calibrated gyroscope aim assist with dedicated options menu, save game screenshot thumbnail system, Roland SC-55 soundtrack Jukebox, complete 3DS multiplayer touchscreen UI suite (LAN browser, Direct Join swkbd, Scoreboard overlay toggle), menu hazard and texture corruption fixes, mid-game menu lifecycle resolution, stereo depth clamping and transitions, 24-bit color dithering, bilinear filtering, 30 FPS decoupled rear-view mirror cadence, SD diagnostic bottleneck elimination, and release hardening.
 
 - **v1.0.0 – v2.0.7 (Initial Port, Stereoscopic 3D & CIA Packaging):**
   - **Assistant:** **Hermes Agent** (Nous Research)
