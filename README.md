@@ -242,6 +242,11 @@ These were broken or missing in the original 3DS port and are now working:
   thin `GL_TRIANGLE_STRIP` quads.
 - **Blank top screen / strobing / briefing-banner regressions** (a long chain
   of render-path fixes, v86–v99) — resolved; see commit history.
+- **Cheat menu & on-device checkboxes** — accessible via pause menu (`Cheats`),
+  with gamepad button `A` toggling checkbox and radio options in place.
+- **Streamlined handheld options** — eliminated desktop-specific crash hazards
+  in favor of a robust handheld menu (brightness slider, reticle, transparency,
+  dynamic lighting, FPS counter, cockpit toggle).
 
 ---
 
@@ -255,13 +260,6 @@ These were broken or missing in the original 3DS port and are now working:
   twice per frame for stereo depth, framerates may modulate in particularly heavy
   geometric scenes.
 - **Original (Old) 3DS / 2DS** — untested; see below.
-- **Cheat menu** — disabled in v2.0.7. Its `newmenu` checkbox widgets can't be
-  toggled on-device (the cheat menu is on the top screen, which has no touch —
-  the toggle relies on input the current build doesn't route to those widgets).
-  Re-enabled in a later release once the toggle path is fixed.
-- **Changing graphical settings** — toggling in-game graphical options (cockpit
-  mode, transparency/lighting effects, etc.) may cause on-screen graphical
-  corruption. Reload the level or restart the app to clear it.
 
 ---
 
