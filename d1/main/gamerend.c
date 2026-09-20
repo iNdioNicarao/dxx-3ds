@@ -799,7 +799,11 @@ void game_render_frame_mono(int flip)
 		extern void tactical_render_rear_3d(void);
 		extern void tactical_bottom_tick(void);
 		if (tactical_is_active()) {
-			tactical_render_rear_3d();
+			static int s_rear_cadence_toggle = 0;
+			/* 3DS Performance: Alternate-frame cadence (30 FPS mirror, 60 FPS flight) */
+			if ((++s_rear_cadence_toggle & 1) == 0) {
+				tactical_render_rear_3d();
+			}
 			tactical_bottom_tick();
 		}
 	}

@@ -607,7 +607,6 @@ void bottom_screen_present(void)
 	if (pglIsPoweredOff())
 		return;
 
-	gspWaitForVBlank();
 	if (g_bot_backbuf) {
 		memcpy(g_bot_buf, g_bot_backbuf, g_bot_w * g_bot_h * sizeof(uint16_t));
 	}

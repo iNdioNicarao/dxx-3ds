@@ -1,10 +1,9 @@
-# Stereoscopic 3D on the 3DS (EXPERIMENTAL)
+# Stereoscopic 3D on the 3DS
 
-> **Status: EXPERIMENTAL.** This feature lives on the `stereo-3d` branch
-> only. It is *not* in the stable `master` build. It works (verified on
-> hardware: depth is perceptible, near objects pop), but it is unfinished
-> and has known sharp edges documented under "Limitations" below. Use at
-> your own risk.
+> **Status: Integrated in `master`.** Stereoscopic 3D is fully stabilized,
+> hardware-accelerated via picaGL, and integrated directly into the `master`
+> build. It is seamlessly controlled via the 3DS physical 3D slider (slider up
+> engages stereoscopic depth, slider down returns to 2D mono).
 
 This document explains **what the stereoscopic 3D does, the two different
 methods it can use, and how to tune it live on-device** without

@@ -244,16 +244,26 @@ void tactical_render_rear_3d(void)
 	if (!tactical_is_active() || !g_rear_view_buf)
 		return;
 
+	/* Don't waste GPU/CPU rendering rear view if current mode doesn't show it */
+	if (g_tactical_mode == TACTICAL_MODE_FULL_RADAR || g_tactical_mode == TACTICAL_MODE_FULL_MAP)
+		return;
+
 	int saved_demo_state = Newdemo_state;
 	if (Newdemo_state == ND_STATE_RECORDING)
 		Newdemo_state = ND_STATE_NORMAL;
 
 	Rear_view = 1;
 
+	/* 3DS Performance: Cap render depth for small auxiliary mirror (saves heavy segment traversal) */
+	int saved_render_depth = Render_depth;
+	if (Render_depth > 18)
+		Render_depth = 18;
+
 	/* Render full 400x240 aft scene to the main screen canvas (no cockpit cutout) */
 	gr_set_current_canvas(&grd_curscreen->sc_canvas);
 	render_frame(0);
 
+	Render_depth = saved_render_depth;
 	Rear_view = 0;
 	Newdemo_state = saved_demo_state;
 

@@ -100,5 +100,5 @@ The 3DS SDL_mixer port does not decode stock HMP MIDI directly. For authentic Ro
 * **AI Coding Partner**: Gemini Antigravity (Google DeepMind)
 * **Initial 3DS Port Base & Stereo 3D**: Hermes Agent (Nous Research) & Parallax Software / DXX-Rebirth team
 * **Community Contributors & Research**:
-  * **CrashMidnick (GBAtemp)**: Invaluable hardware testing and feedback on N3DS and O3DS that guided multiple core fixes: reporting in-game screen tearing/texture shaking (resolved via GPU pipeline & bilinear filtering improvements), identifying overly aggressive default 3D depth settings (leading to softened, comfortable stereo depth scaling), highlighting MIDI extraction issues (leading to the elimination of redundant MIDI generation and implementation of the clean WAV/MP3/OGG audio fallback chain), and reporting Old 3DS compatibility issues. Sincere thanks for these outstanding contributions!
+  * **CrashMidnick (GBAtemp)**: Sincere thanks for continued testing and valuable feedback!
   * **bakuDD (GBAtemp)**: Research and recommendation of the authentic Roland Sound Canvas SC-55 soundtrack recordings from [sc55.duke4.net](https://sc55.duke4.net/mp3/descent1_mp3.zip) by Brandon Blume, providing the definitive high-fidelity audio solution for the 3DS port. Sincere thanks for this great contribution!

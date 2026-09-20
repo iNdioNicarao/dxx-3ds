@@ -32,7 +32,7 @@ APP_DESCRIPTION := Port of DXX-Rebirth to 3DS
 APP_AUTHOR		:= El iNdioNicarao
 VER_MAJOR	:=	2
 VER_MINOR	:=	1
-VER_MICRO			:=	0
+VER_MICRO			:=	1
 APP_VERSION	:=	$(VER_MAJOR).$(VER_MINOR).$(VER_MICRO)
 
 
@@ -60,7 +60,7 @@ CFLAGS += -fsigned-char  $(INCLUDE) -DARM11 -D_3DS -DOGL -DOGLES -DCROSSHAIR
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 
 ASFLAGS	:=	-g $(ARCH)
-LDFLAGS	=	-flto --specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+LDFLAGS	=	-fno-short-enums --specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
 #LIBS	:= -lSDL_mixer -lSDL -lnx -lphysfs -lFLAC -lmikmod -lvorbisidec -logg -lm
 LIBS	:= -lphysfs -lpicaGL -lSDL_mixer -lSDL_image -lSDL -lmikmod -lmad -lvorbisidec -logg -lpng -ljpeg -lz -lcitro3d -lctru -lm

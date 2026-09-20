@@ -325,7 +325,7 @@ int main(int argc, char *argv[])
 	gfxSetDoubleBuffering(GFX_BOTTOM, false);
 	bottom_screen_init();
 
-	osSetSpeedupEnable(1); // Should get away with removing this
+	osSetSpeedupEnable(1);
 #endif
 	mem_init();
 #if defined(__LINUX__) || defined(__APPLE__)
