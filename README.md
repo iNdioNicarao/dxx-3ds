@@ -102,10 +102,8 @@ Then pick **one** install method:
 - Copy `d1x-3ds.cia` to your SD card, install it with **FBI**, and launch
   from the home menu.
 
-**B. 3DSX (Homebrew Launcher, no install)** — use the `d1x-3ds.3dsx` +
-`d1x-3ds.smdh` pair from a release:
-- Copy **both** files into `sd:/3ds/D1X-3DS/` (keep them together — the
-  `.smdh` is the icon/metadata the Homebrew Launcher needs).
+**B. 3DSX (Homebrew Launcher, no install)** — use the `d1x-3ds.3dsx` from a release:
+- Copy `d1x-3ds.3dsx` into `sd:/3ds/D1X-3DS/`.
 - Launch `D1X 3DS` from the **Homebrew Menu** (hold the appropriate
   exploit at boot, or use a forwarder).
 
