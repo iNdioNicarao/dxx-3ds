@@ -11,6 +11,12 @@
 final_changes.diff
 parsed_dump_*.txt
 crash_dump_*.dmp
+*dump*.txt
+objdump*.txt
+*symbols*.txt
+state_o*.txt
+test_strings*.txt
+gamelog*.txt
 diag/
 
 # --- Game data the USER must supply (copyrighted, NOT redistributable) ---

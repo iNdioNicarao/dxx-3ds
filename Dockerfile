@@ -7,13 +7,14 @@ RUN cd / && git clone --recursive https://github.com/profi200/Project_CTR
 RUN cd /Project_CTR/makerom && make deps && make
 ENV PATH="/Project_CTR/makerom/bin:${PATH}"
 
-# Install bannertool
-RUN apt-get install -y wget unzip && \
+# Install bannertool (with multiarch support for running on arm64)
+RUN dpkg --add-architecture amd64 && apt-get update && \
+    apt-get install -y wget unzip libc6:amd64 libstdc++6:amd64 && \
     wget https://github.com/Epicpkmn11/bannertool/releases/download/v1.2.2/bannertool.zip && \
     unzip bannertool.zip && \
     mv linux-x86_64/bannertool /usr/local/bin/ && \
     chmod +x /usr/local/bin/bannertool && \
-    rm *.zip
+    rm -f *.zip
 
 # Install PHYSFS
 RUN cd / && git clone https://github.com/RossMeikleham/physfs-3ds
@@ -24,14 +25,14 @@ RUN cd physfs-3ds && mkdir build && cd build &&\
     make &&\
     make install
 
-# Build D1X & D2X .3dsx and .cia files
+# Build D1X only
 RUN mkdir /dxx/
-ADD  d1 /dxx/d1/
-ADD  d2 /dxx/d2/
-ADD  libs /dxx/libs/
+ADD d1 /dxx/d1/
+ADD libs /dxx/libs/
 WORKDIR /dxx/
 
-CMD cd libs/picaGL && make && cd ../../d1 && make && cp d1x-3ds.3dsx /mnt &&\ 
-    cd 3ds_data && ./make_cia.sh && cp d1x-3ds.cia /mnt &&\
-    cd ../../d2 && make && cp d2x-3ds.3dsx /mnt &&\
-    cd 3ds_data && ./make_cia.sh && cp d2x-3ds.cia /mnt
+CMD cd libs/picaGL && make && cd ../../d1 && make && \
+    cd 3ds_data && cp ../d1x-3ds.elf . && ./make_cia.sh && \
+    cp d1x-3ds-*.cia /mnt/ && cp ../d1x-3ds.elf /mnt/ && \
+    cp ../d1x-3ds.3dsx /mnt/
+
