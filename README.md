@@ -51,6 +51,11 @@ This release introduces the **Complete 3DS Multiplayer Touchscreen Suite** for U
   - Tapping `[ SCORE ]` cycles the kill matrix / scoreboard overlay (`OFF` -> `Kills` -> `Deaths` -> `Team`, PC `F7`) with real-time HUD status messages.
 - **AutoDemo Storage Protection**:
   - Disabled automatic multiplayer demo recording by default (`PlayerCfg.AutoDemo = 0`) to prevent matches from inadvertently consuming SD card storage space.
+- **VCR Demo Playback Touch Controller**:
+  - Automatically transforms the bottom touchscreen into an active VCR remote during demo playback.
+  - Full transport deck: Jump to Start (`|<<`), Fast Rewind (`<<`), Step Backward 1 Frame (`<|`), Play/Pause, Step Forward 1 Frame (`|>`), Fast Forward 2x (`>>`), Jump to End (`>>|`), and Stop & Exit (`[STOP & EXIT]`).
+  - Live progress bar showing real-time playback percentage (`0%`–`100%`) with visual gradient indicator.
+  - Real-time transport status display (`PLAYING (1x)`, `PAUSED`, `FAST FORWARD (2x)`, `REWINDING`, `STEP FORWARD`, `STEP BACKWARD`).
 
 ---
 

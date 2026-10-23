@@ -1124,6 +1124,7 @@ int game_handler(window *wind, d_event *event, void *data)
 		 * is erased; while playing we skip the polls so they aren't
 		 * (re)drawn. Returning to normal play redraws them (reset put each
 		 * button back to its undrawn state). */
+		/* 3DS: Full VCR Demo Playback Touch Controller */
 		static int bs_was_playback = 0;
 		if (Newdemo_state == ND_STATE_PLAYBACK) {
 			if (!bs_was_playback) {
@@ -1135,10 +1136,49 @@ int game_handler(window *wind, d_event *event, void *data)
 				bottom_pri_reset();
 				bottom_sec_reset();
 				bottom_clear(0);
+				bottom_vcr_init();
 				bs_was_playback = 1;
 			}
-		} else {
+			bottom_vcr_draw(newdemo_get_percent_done(), Newdemo_vcr_state);
+			int vcr_cmd = bottom_vcr_poll();
+			if (vcr_cmd) {
+				switch (vcr_cmd) {
+					case VCR_CMD_START:
+						newdemo_goto_beginning();
+						break;
+					case VCR_CMD_REWIND:
+						Newdemo_vcr_state = ND_STATE_REWINDING;
+						break;
+					case VCR_CMD_STEP_BACK:
+						Newdemo_vcr_state = ND_STATE_ONEFRAMEBACKWARD;
+						break;
+					case VCR_CMD_PLAY_PAUSE:
+						if (Newdemo_vcr_state == ND_STATE_PAUSED)
+							Newdemo_vcr_state = ND_STATE_PLAYBACK;
+						else
+							Newdemo_vcr_state = ND_STATE_PAUSED;
+						break;
+					case VCR_CMD_STEP_FWD:
+						Newdemo_vcr_state = ND_STATE_ONEFRAMEFORWARD;
+						break;
+					case VCR_CMD_FFWD:
+						Newdemo_vcr_state = ND_STATE_FASTFORWARD;
+						break;
+					case VCR_CMD_END:
+						newdemo_goto_end(0);
+						break;
+					case VCR_CMD_STOP:
+						newdemo_stop_playback();
+						break;
+				}
+				return 1;
+			}
+			return 0;
+		}
+		if (bs_was_playback) {
+			bottom_vcr_reset();
 			bs_was_playback = 0;
+		}
 		if (bottom_menu_tapped()) {
 			{
 			}
@@ -1217,7 +1257,6 @@ int game_handler(window *wind, d_event *event, void *data)
 				CycleSecondary();
 				return 1;
 			}
-		}
 #endif
 			return ReadControls(event);
 

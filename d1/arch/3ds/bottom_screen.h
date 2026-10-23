@@ -159,4 +159,22 @@ void bottom_draw_circle(int cx, int cy, int r, uint16_t c,
  * bottom-screen 90deg-CW rotation. Returns pixel advance width. */
 /* (internal to bottom_screen.c — defined there; not prototyped here) */
 
+/* VCR Demo Playback Touch Controller (3DS). */
+enum {
+	VCR_CMD_NONE = 0,
+	VCR_CMD_START,      /* |<< Jump to beginning */
+	VCR_CMD_REWIND,     /* << Fast rewind */
+	VCR_CMD_STEP_BACK,  /* <| Step 1 frame backward */
+	VCR_CMD_PLAY_PAUSE, /* Play/Pause toggle */
+	VCR_CMD_STEP_FWD,   /* |> Step 1 frame forward */
+	VCR_CMD_FFWD,       /* >> Fast forward */
+	VCR_CMD_END,        /* >>| Jump to end */
+	VCR_CMD_STOP,       /* Stop playback and exit */
+	VCR_CMD_NUM
+};
+void bottom_vcr_init(void);
+void bottom_vcr_draw(int percent_done, int vcr_state);
+int bottom_vcr_poll(void);
+void bottom_vcr_reset(void);
+
 #endif /* _BOTTOM_SCREEN_H_ */

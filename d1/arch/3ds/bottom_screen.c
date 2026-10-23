@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <GL/picaGL.h>   /* pglIsPoweredOff — bail bottom-screen flush on power-off */
 #include "bottom_screen.h"
+#include "tactical_bottom.h"
 #include "game.h"
 #include "gamefont.h"   /* GAME_FONT / Gamefonts[] — real Descent font for labels */
 #include "gr.h"         /* grs_bitmap, gr_palette (6-bit), SWIDTH/SHEIGHT */
@@ -1368,6 +1369,158 @@ void bottom_sec_reset(void)
 	g_sec_btn_prev = 0;
 }
 
+/* =========================================================================
+ * VCR Demo Playback Touch Controller (3DS)
+ * ========================================================================= */
+static int g_vcr_active = 0;
+static int g_vcr_drawn = 0;
+static int g_vcr_last_pct = -1;
+static int g_vcr_last_state = -1;
+static int g_vcr_key_prev[VCR_CMD_NUM] = {0};
+static int g_vcr_key_bbox[VCR_CMD_NUM][4];
+
+/* Layout coordinates:
+ * Row 1 (y=90, h=40): START (x=16, w=66), REW (x=90, w=66), STEP_BACK (x=164, w=66), STEP_FWD (x=238, w=66)
+ * Row 2 (y=138, h=42): PLAY/PAUSE (x=16, w=140), FFWD (x=164, w=66), END (x=238, w=66)
+ * Row 3 (y=188, h=42): STOP (x=16, w=288)
+ */
+static const struct {
+	int cmd;
+	int x, y, w, h;
+	const char *label;
+	uint16_t color;
+} g_vcr_buttons[] = {
+	{ VCR_CMD_START,      16,  90,  66, 40, "|<<",         BTN_BLUE },
+	{ VCR_CMD_REWIND,     90,  90,  66, 40, "<<",          BTN_BLUE },
+	{ VCR_CMD_STEP_BACK, 164,  90,  66, 40, "<|",          BTN_BLUE },
+	{ VCR_CMD_STEP_FWD,  238,  90,  66, 40, "|>",          BTN_BLUE },
+	{ VCR_CMD_PLAY_PAUSE, 16, 138, 140, 42, "PAUSE",       BTN_BLUE },
+	{ VCR_CMD_FFWD,      164, 138,  66, 42, ">>",          BTN_BLUE },
+	{ VCR_CMD_END,       238, 138,  66, 42, ">>|",         BTN_BLUE },
+	{ VCR_CMD_STOP,       16, 188, 288, 42, "STOP & EXIT", BTN_RED  }
+};
+#define VCR_NUM_BUTTONS (sizeof(g_vcr_buttons)/sizeof(g_vcr_buttons[0]))
+
+void bottom_vcr_init(void)
+{
+	g_vcr_active = 1;
+	g_vcr_drawn = 0;
+	g_vcr_last_pct = -1;
+	g_vcr_last_state = -1;
+	memset(g_vcr_key_prev, 0, sizeof(g_vcr_key_prev));
+	memset(g_vcr_key_bbox, -1, sizeof(g_vcr_key_bbox));
+	tactical_set_suspended(1);
+	bottom_clear(0x0000);
+}
+
+void bottom_vcr_draw(int percent_done, int vcr_state)
+{
+	if (!g_vcr_active)
+		return;
+
+	if (percent_done < 0) percent_done = 0;
+	if (percent_done > 100) percent_done = 100;
+
+	/* Full redraw on initial entry or mode switch */
+	if (!g_vcr_drawn) {
+		g_vcr_drawn = 1;
+		bottom_clear(0x0000);
+		bottom_print(72, 8, "VCR DEMO CONTROLLER", 0x07FF /* CYAN */);
+
+		size_t i;
+		for (i = 0; i < VCR_NUM_BUTTONS; i++) {
+			const char *lbl = g_vcr_buttons[i].label;
+			uint16_t col = g_vcr_buttons[i].color;
+			if (g_vcr_buttons[i].cmd == VCR_CMD_PLAY_PAUSE) {
+				lbl = (vcr_state == 3 /* PAUSED */) ? "PLAY" : "PAUSE";
+				col = (vcr_state == 3 /* PAUSED */) ? BTN_GREEN : BTN_BLUE;
+			}
+			draw_key(g_vcr_buttons[i].x, g_vcr_buttons[i].y,
+			         g_vcr_buttons[i].w, g_vcr_buttons[i].h,
+			         col, lbl, g_vcr_key_bbox[g_vcr_buttons[i].cmd]);
+		}
+	}
+
+	/* Redraw state text if state changed */
+	if (vcr_state != g_vcr_last_state) {
+		g_vcr_last_state = vcr_state;
+		bottom_clear_rect(16, 26, 288, 16);
+		const char *st_str = "STATUS: PLAYING (1x)";
+		uint16_t st_col = 0x07E0; /* GREEN */
+		if (vcr_state == 3) { st_str = "STATUS: PAUSED"; st_col = 0xFFE0; /* YELLOW */ }
+		else if (vcr_state == 4) { st_str = "STATUS: REWINDING"; st_col = 0xFFE0; }
+		else if (vcr_state == 5) { st_str = "STATUS: FAST FORWARD (2x)"; st_col = 0x07FF; }
+		else if (vcr_state == 6) { st_str = "STATUS: STEP FORWARD"; st_col = 0x07E0; }
+		else if (vcr_state == 7) { st_str = "STATUS: STEP BACKWARD"; st_col = 0xFFE0; }
+		bottom_print(24, 28, st_str, st_col);
+
+		/* Update Play/Pause button label and color */
+		size_t i;
+		for (i = 0; i < VCR_NUM_BUTTONS; i++) {
+			if (g_vcr_buttons[i].cmd == VCR_CMD_PLAY_PAUSE) {
+				const char *lbl = (vcr_state == 3) ? "PLAY" : "PAUSE";
+				uint16_t col = (vcr_state == 3) ? BTN_GREEN : BTN_BLUE;
+				draw_key(g_vcr_buttons[i].x, g_vcr_buttons[i].y,
+				         g_vcr_buttons[i].w, g_vcr_buttons[i].h,
+				         col, lbl, g_vcr_key_bbox[VCR_CMD_PLAY_PAUSE]);
+				break;
+			}
+		}
+	}
+
+	/* Redraw progress bar if percent changed */
+	if (percent_done != g_vcr_last_pct) {
+		g_vcr_last_pct = percent_done;
+		bottom_clear_rect(16, 46, 288, 38);
+		char p_str[32];
+		snprintf(p_str, sizeof(p_str), "PROGRESS: %d%%", percent_done);
+		bottom_print(24, 48, p_str, 0xFFFF /* WHITE */);
+
+		/* Bar outline & fill */
+		bottom_draw_rect(24, 64, 272, 14, 0x4208 /* DARK GRAY */, 0, 0, 320, 240);
+		int fill_w = (268 * percent_done) / 100;
+		if (fill_w > 0)
+			bottom_fill_rect(26, 66, fill_w, 10, 0x07E0 /* GREEN */);
+	}
+}
+
+int bottom_vcr_poll(void)
+{
+	if (!g_vcr_active)
+		return 0;
+
+	touchPosition t;
+	int touching = (hidKeysHeld() & KEY_TOUCH) ? 1 : 0;
+	if (touching) hidTouchRead(&t);
+
+	size_t i;
+	int result = 0;
+	for (i = 0; i < VCR_NUM_BUTTONS; i++) {
+		int cmd = g_vcr_buttons[i].cmd;
+		int held = touching && bottom_hit(g_vcr_buttons[i].x, g_vcr_buttons[i].y,
+		                                  g_vcr_buttons[i].w, g_vcr_buttons[i].h, &t);
+		if (held && !g_vcr_key_prev[cmd]) {
+			result = cmd;
+			g_vcr_key_prev[cmd] = held;
+			break;
+		}
+		g_vcr_key_prev[cmd] = held;
+	}
+
+	return result;
+}
+
+void bottom_vcr_reset(void)
+{
+	g_vcr_active = 0;
+	g_vcr_drawn = 0;
+	g_vcr_last_pct = -1;
+	g_vcr_last_state = -1;
+	memset(g_vcr_key_prev, 0, sizeof(g_vcr_key_prev));
+	tactical_set_suspended(0);
+	bottom_clear(0x0000);
+}
+
 
 /* --- HUD toggle (top-left) stays; stereo buttons removed: the 3D slider
  * handles separation, and only PARALLEL mode is used. --- */
@@ -1393,4 +1546,8 @@ static inline int bottom_direct_ip_tapped(void) { return 0; }
 static inline void bottom_direct_ip_reset(void) {}
 static inline int bottom_direct_connect_tapped(void) { return 0; }
 static inline void bottom_direct_connect_reset(void) {}
+static inline void bottom_vcr_init(void) {}
+static inline void bottom_vcr_draw(int p, int s) { (void)p; (void)s; }
+static inline int bottom_vcr_poll(void) { return 0; }
+static inline void bottom_vcr_reset(void) {}
 #endif

@@ -40,6 +40,9 @@ void tactical_zoom(int step);
 /* Toggle between split and full-screen modes */
 void tactical_toggle_mode(void);
 
+/* Suspend/resume tactical drawing (e.g. VCR demo playback borrows screen area) */
+void tactical_set_suspended(int suspended);
+
 /* Check if the tactical bottom screen is active */
 int tactical_is_active(void);
 

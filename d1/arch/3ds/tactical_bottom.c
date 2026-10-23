@@ -62,6 +62,8 @@
 
 /* State */
 static tactical_mode_t g_tactical_mode = TACTICAL_MODE_TRI;
+static tactical_mode_t g_last_rendered_mode = (tactical_mode_t)-1;
+static int g_tactical_suspended = 0;
 static int g_radar_range_idx = 1; /* Default: 200m */
 static const int g_radar_ranges[] = { 100, 200, 400, 800 };
 #define NUM_RADAR_RANGES (int)(sizeof(g_radar_ranges)/sizeof(g_radar_ranges[0]))
@@ -135,9 +137,17 @@ void tactical_toggle_mode(void)
 	}
 }
 
+void tactical_set_suspended(int suspended)
+{
+	g_tactical_suspended = suspended ? 1 : 0;
+	g_touch_down_prev = 1;                 /* swallow tap on transition */
+	g_last_rendered_mode = (tactical_mode_t)-1;   /* force full repaint on resume */
+}
+
 int tactical_is_active(void)
 {
-	return (Game_wind != NULL && Player_num >= 0 && Player_num < N_players &&
+	return (!g_tactical_suspended &&
+	        Game_wind != NULL && Player_num >= 0 && Player_num < N_players &&
 	        !Automap_active && !Player_is_dead && ConsoleObject != NULL);
 }
 
@@ -607,7 +617,6 @@ static void render_mini_automap(int ax, int ay, int aw, int ah, int pulse)
 }
 
 /* --- Per-Frame Tick --- */
-static tactical_mode_t g_last_rendered_mode = (tactical_mode_t)-1;
 
 void tactical_bottom_tick(void)
 {
