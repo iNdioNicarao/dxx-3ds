@@ -1010,6 +1010,127 @@ void game_render_frame();
 
 window *Game_wind = NULL;
 
+#if defined(__3DS__) && defined(NETWORK)
+/* 3DS: Full Observer Touch Remote Deck (active only during observer mode) */
+enum {
+	OBS_CMD_PREV = 1,
+	OBS_CMD_NEXT,
+	OBS_CMD_1ST_PERSON,
+	OBS_CMD_3RD_PERSON,
+	OBS_CMD_FREE_ROAM,
+	OBS_CMD_NET_STATS,
+	OBS_CMD_SCOREBOARD,
+	OBS_CMD_MENU
+};
+
+static bs_pal_key_t s_obs_keys[] = {
+	{ "< PREV",      OBS_CMD_PREV,       0 },
+	{ "NEXT >",      OBS_CMD_NEXT,       0 },
+	{ "1ST PERSON",  OBS_CMD_1ST_PERSON, 0 },
+	{ "3RD PERSON",  OBS_CMD_3RD_PERSON, 0 },
+	{ "FREE ROAM",   OBS_CMD_FREE_ROAM,  0 },
+	{ "NET STATS",   OBS_CMD_NET_STATS,  0 },
+	{ "SCOREBOARD",  OBS_CMD_SCOREBOARD, 0 },
+	{ "MAIN MENU",   OBS_CMD_MENU,       0 },
+};
+
+static void bottom_observer_tick(void)
+{
+	static int last_obs_pnum = -999;
+	static int last_obs_dist = -999;
+	char title[48];
+
+	if (Current_obs_player == OBSERVER_PLAYER_ID) {
+		snprintf(title, sizeof(title), "OBSERVER: FREE ROAM");
+	} else {
+		snprintf(title, sizeof(title), "OBSERVER: %s (%s)",
+		         Players[Current_obs_player].callsign,
+		         Obs_at_distance ? "3RD" : "1ST");
+	}
+
+	if (!bottom_pal_is_open()) {
+		s_obs_keys[2].state = (Obs_at_distance == 0 && Current_obs_player != OBSERVER_PLAYER_ID) ? 1 : 0;
+		s_obs_keys[3].state = (Obs_at_distance == 1 && Current_obs_player != OBSERVER_PLAYER_ID) ? 1 : 0;
+		s_obs_keys[4].state = (Current_obs_player == OBSERVER_PLAYER_ID) ? 1 : 0;
+		bottom_pal_open(title, s_obs_keys, 8, 2);
+		last_obs_pnum = Current_obs_player;
+		last_obs_dist = Obs_at_distance;
+	} else if (Current_obs_player != last_obs_pnum || Obs_at_distance != last_obs_dist) {
+		s_obs_keys[2].state = (Obs_at_distance == 0 && Current_obs_player != OBSERVER_PLAYER_ID) ? 1 : 0;
+		s_obs_keys[3].state = (Obs_at_distance == 1 && Current_obs_player != OBSERVER_PLAYER_ID) ? 1 : 0;
+		s_obs_keys[4].state = (Current_obs_player == OBSERVER_PLAYER_ID) ? 1 : 0;
+		bottom_pal_close();
+		bottom_pal_open(title, s_obs_keys, 8, 2);
+		last_obs_pnum = Current_obs_player;
+		last_obs_dist = Obs_at_distance;
+	}
+
+	int cmd = bottom_pal_poll();
+	if (cmd) {
+		switch (cmd) {
+			case OBS_CMD_PREV: {
+				int new_obs = Current_obs_player;
+				while (1) {
+					new_obs = (MAX_PLAYERS + new_obs - 1) % MAX_PLAYERS;
+					if (new_obs == OBSERVER_PLAYER_ID) {
+						reset_obs();
+						break;
+					}
+					if (Players[new_obs].connected == CONNECT_PLAYING) {
+						set_obs(new_obs);
+						break;
+					}
+				}
+				break;
+			}
+			case OBS_CMD_NEXT: {
+				int new_obs = Current_obs_player;
+				while (1) {
+					new_obs = (new_obs + 1) % MAX_PLAYERS;
+					if (new_obs == OBSERVER_PLAYER_ID) {
+						reset_obs();
+						break;
+					}
+					if (Players[new_obs].connected == CONNECT_PLAYING) {
+						set_obs(new_obs);
+						break;
+					}
+				}
+				break;
+			}
+			case OBS_CMD_1ST_PERSON:
+				if (Current_obs_player != OBSERVER_PLAYER_ID) {
+					Obs_at_distance = 0;
+					HUD_init_message_literal(HM_MULTI, "Observing first person.");
+				}
+				break;
+			case OBS_CMD_3RD_PERSON:
+				if (Current_obs_player != OBSERVER_PLAYER_ID) {
+					Obs_at_distance = 1;
+					HUD_init_message_literal(HM_MULTI, "Observing third person.");
+				}
+				break;
+			case OBS_CMD_FREE_ROAM:
+				reset_obs();
+				HUD_init_message_literal(HM_MULTI, "Observing freely.");
+				break;
+			case OBS_CMD_NET_STATS:
+				Show_network_stats = !Show_network_stats;
+				break;
+			case OBS_CMD_SCOREBOARD:
+				Show_kill_list = (Show_kill_list + 1) % ((Game_mode & GM_TEAM) ? 4 : 3);
+				Show_kill_list_timer = 0;
+				multi_sort_kill_list();
+				break;
+			case OBS_CMD_MENU:
+				bottom_pal_close();
+				DoMenu();
+				break;
+		}
+	}
+}
+#endif
+
 // Event handler for the game
 int game_handler(window *wind, d_event *event, void *data)
 {
@@ -1179,6 +1300,31 @@ int game_handler(window *wind, d_event *event, void *data)
 			bottom_vcr_reset();
 			bs_was_playback = 0;
 		}
+
+#ifdef NETWORK
+		/* 3DS: Full Observer Touch Remote Deck (active only during observer mode) */
+		static int bs_was_observer = 0;
+		if ((Game_mode & GM_OBSERVER) && Newdemo_state != ND_STATE_PLAYBACK) {
+			if (!bs_was_observer) {
+				bottom_menu_reset();
+				bottom_save_reset();
+				bottom_rec_reset();
+				bottom_hud_reset();
+				bottom_gyro_reset();
+				bottom_pri_reset();
+				bottom_sec_reset();
+				bottom_clear(0);
+				bs_was_observer = 1;
+			}
+			bottom_observer_tick();
+			return 1;
+		}
+		if (bs_was_observer) {
+			if (bottom_pal_is_open())
+				bottom_pal_close();
+			bs_was_observer = 0;
+		}
+#endif
 		if (bottom_menu_tapped()) {
 			{
 			}
