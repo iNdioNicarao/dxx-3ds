@@ -177,4 +177,22 @@ void bottom_vcr_draw(int percent_done, int vcr_state);
 int bottom_vcr_poll(void);
 void bottom_vcr_reset(void);
 
+/* Generic Touch Palette (3DS): a context-only grid of large touch keys that
+ * is opened while a feature is active (automap, multiplayer comms, observer,
+ * music...) and closed afterwards. state: 0 normal, 1 active (green),
+ * 2 disabled (grey, never returned). Key ids must be non-zero. The caller
+ * keeps `keys` alive while open and calls bottom_pal_refresh() after editing
+ * labels/states. bottom_pal_poll() draws on demand and returns the tapped id
+ * (edge-triggered) or 0. */
+typedef struct {
+	const char *label;
+	int id;
+	int state;
+} bs_pal_key_t;
+void bottom_pal_open(const char *title, bs_pal_key_t *keys, int nkeys, int cols);
+void bottom_pal_refresh(void);
+int  bottom_pal_poll(void);
+int  bottom_pal_is_open(void);
+void bottom_pal_close(void);
+
 #endif /* _BOTTOM_SCREEN_H_ */

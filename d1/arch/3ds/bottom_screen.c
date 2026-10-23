@@ -1522,6 +1522,109 @@ void bottom_vcr_reset(void)
 }
 
 
+/* =========================================================================
+ * Generic Touch Palette (3DS)
+ *
+ * A full-screen, context-only grid of large touch keys for actions that have
+ * a PC keyboard shortcut but no 3DS button (automap depth/zoom, multiplayer
+ * chat/taunts, observer camera, music transport...). It is opened ONLY while
+ * its feature is active and closed again afterwards; the caller owns what
+ * each key id means. Keys are text-as-button, like draw_key everywhere else.
+ * ========================================================================= */
+#define PAL_MAX_KEYS 12
+static bs_pal_key_t *g_pal_keys = NULL;
+static int g_pal_n = 0, g_pal_cols = 1;
+static int g_pal_open = 0, g_pal_drawn = 0;
+static char g_pal_title[40];
+static int g_pal_prev[PAL_MAX_KEYS];
+static int g_pal_bbox[PAL_MAX_KEYS][4];
+
+static void pal_key_rect(int i, int *x, int *y, int *w, int *h)
+{
+	const int gap = 6, top = 28;
+	int rows = (g_pal_n + g_pal_cols - 1) / g_pal_cols;
+	int kh = (BS_LOGICAL_H - top - 6 - gap * (rows - 1)) / rows;
+	int kw = (BS_LOGICAL_W - 16 - gap * (g_pal_cols - 1)) / g_pal_cols;
+	if (kh > 46) kh = 46;
+	*x = 8 + (i % g_pal_cols) * (kw + gap);
+	*y = top + (i / g_pal_cols) * (kh + gap);
+	*w = kw;
+	*h = kh;
+}
+
+void bottom_pal_open(const char *title, bs_pal_key_t *keys, int nkeys, int cols)
+{
+	if (nkeys > PAL_MAX_KEYS) nkeys = PAL_MAX_KEYS;
+	if (cols < 1) cols = 1;
+	g_pal_keys = keys;
+	g_pal_n = nkeys;
+	g_pal_cols = cols;
+	snprintf(g_pal_title, sizeof(g_pal_title), "%s", title ? title : "");
+	g_pal_open = 1;
+	g_pal_drawn = 0;
+	/* Swallow the finger that opened us: treat every key as already held. */
+	for (int i = 0; i < PAL_MAX_KEYS; i++) g_pal_prev[i] = 1;
+	memset(g_pal_bbox, -1, sizeof(g_pal_bbox));
+	tactical_set_suspended(1);
+	bottom_clear(0x0000);
+}
+
+void bottom_pal_refresh(void)
+{
+	g_pal_drawn = 0;
+}
+
+int bottom_pal_is_open(void)
+{
+	return g_pal_open;
+}
+
+int bottom_pal_poll(void)
+{
+	int result = 0;
+	touchPosition t;
+	int touching = (hidKeysHeld() & KEY_TOUCH) ? 1 : 0;
+
+	if (!g_pal_open || !g_pal_keys)
+		return 0;
+	if (touching) hidTouchRead(&t);
+
+	if (!g_pal_drawn) {
+		g_pal_drawn = 1;
+		bottom_clear(0x0000);
+		bottom_fill_marble();   /* paint the slab BEFORE the title so it survives */
+		bottom_print(8, 8, g_pal_title, 0x07FF /* CYAN */);
+		for (int i = 0; i < g_pal_n; i++) {
+			int x, y, w, h;
+			uint16_t col = g_pal_keys[i].state == 1 ? BTN_GREEN :
+			               g_pal_keys[i].state == 2 ? BTN_GREY : BTN_BLUE;
+			pal_key_rect(i, &x, &y, &w, &h);
+			draw_key(x, y, w, h, col, g_pal_keys[i].label, g_pal_bbox[i]);
+		}
+	}
+
+	for (int i = 0; i < g_pal_n; i++) {
+		int x, y, w, h;
+		int held;
+		pal_key_rect(i, &x, &y, &w, &h);
+		held = touching && bottom_hit(x, y, w, h, &t);
+		if (held && !g_pal_prev[i] && g_pal_keys[i].state != 2 && !result)
+			result = g_pal_keys[i].id;
+		g_pal_prev[i] = held;
+	}
+	return result;
+}
+
+void bottom_pal_close(void)
+{
+	g_pal_open = 0;
+	g_pal_drawn = 0;
+	g_pal_keys = NULL;
+	g_pal_n = 0;
+	tactical_set_suspended(0);
+	bottom_clear(0x0000);
+}
+
 /* --- HUD toggle (top-left) stays; stereo buttons removed: the 3D slider
  * handles separation, and only PARALLEL mode is used. --- */
 #else
