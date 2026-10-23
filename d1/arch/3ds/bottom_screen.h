@@ -131,6 +131,8 @@ int bottom_pri_tapped(void);
 void bottom_pri_reset(void);
 int bottom_sec_tapped(void);
 void bottom_sec_reset(void);
+int bottom_sys_tapped(int is_multi);
+void bottom_sys_reset(void);
 
 /* Always-on automap minimap (3DS): composite the 6DOF automap canvas into a
  * bottom-screen region. dx,dy,dw,dh are logical bottom-screen coords. */

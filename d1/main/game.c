@@ -80,6 +80,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #ifdef __3DS__
 #include "bottom_screen.h" /* 3DS bottom-screen UI (in-game MENU button) */
 #include "tactical_bottom.h" /* 3DS tactical radar & rear-view mirror */
+#include "osk.h"
 #endif
 #include "switch.h"
 #include "controls.h"
@@ -1129,6 +1130,167 @@ static void bottom_observer_tick(void)
 		}
 	}
 }
+
+/* Multiplayer Comms & Taunts Palette (3DS) */
+static int s_d1_pal_mode = 0; /* 0: none, 1: comms, 2: jukebox */
+
+enum {
+	D1_MCP_CHAT = 1,
+	D1_MCP_TAUNT1,
+	D1_MCP_TAUNT2,
+	D1_MCP_TAUNT3,
+	D1_MCP_TAUNT4,
+	D1_MCP_NAMES,
+	D1_MCP_NET_STATS,
+	D1_MCP_CLOSE
+};
+
+static bs_pal_key_t s_mcp_keys_d1[] = {
+	{ "CHAT (OSK)",   D1_MCP_CHAT,      0 },
+	{ "TAUNT 1",      D1_MCP_TAUNT1,    0 },
+	{ "TAUNT 2",      D1_MCP_TAUNT2,    0 },
+	{ "TAUNT 3",      D1_MCP_TAUNT3,    0 },
+	{ "TAUNT 4",      D1_MCP_TAUNT4,    0 },
+	{ "NAMES",        D1_MCP_NAMES,     0 },
+	{ "NET STATS",    D1_MCP_NET_STATS, 0 },
+	{ "CLOSE",        D1_MCP_CLOSE,     0 }
+};
+
+static void bottom_d1_comms_open(void)
+{
+	s_d1_pal_mode = 1;
+	s_mcp_keys_d1[5].state = Show_reticle_name ? 1 : 0;
+	s_mcp_keys_d1[6].state = Show_network_stats ? 1 : 0;
+	bottom_pal_open("MULTIPLAYER COMMS", s_mcp_keys_d1, 8, 2);
+}
+
+static int bottom_d1_comms_poll(void)
+{
+	if (!bottom_pal_is_open())
+		return 0;
+
+	extern void multi_message_feedback(void);
+	int cmd = bottom_pal_poll();
+	if (cmd) {
+		switch (cmd) {
+			case D1_MCP_CHAT: {
+				char chat_buf[MAX_MESSAGE_LEN] = "";
+				osk_opts_t opts = {0};
+				opts.prompt = "Send Message to Players";
+				opts.allow_empty = 0;
+				if (osk_modal_loop_ex(chat_buf, sizeof(chat_buf), &opts) && chat_buf[0] != '\0') {
+					strncpy(Network_message, chat_buf, sizeof(Network_message) - 1);
+					Network_message[sizeof(Network_message) - 1] = 0;
+					Network_message_reciever = 100;
+					HUD_init_message(HM_MULTI, "%s '%s'", TXT_SENDING, Network_message);
+					multi_message_feedback();
+				}
+				bottom_pal_refresh();
+				break;
+			}
+			case D1_MCP_TAUNT1:
+			case D1_MCP_TAUNT2:
+			case D1_MCP_TAUNT3:
+			case D1_MCP_TAUNT4:
+				multi_send_macro(KEY_F9 + (cmd - D1_MCP_TAUNT1));
+				break;
+			case D1_MCP_NAMES:
+				Show_reticle_name = !Show_reticle_name;
+				HUD_init_message(HM_MULTI, "Target callsigns: %s", Show_reticle_name ? "ON" : "OFF");
+				s_mcp_keys_d1[5].state = Show_reticle_name ? 1 : 0;
+				bottom_pal_refresh();
+				break;
+			case D1_MCP_NET_STATS:
+				Show_network_stats = !Show_network_stats;
+				HUD_init_message(HM_MULTI, "Network stats: %s", Show_network_stats ? "ON" : "OFF");
+				s_mcp_keys_d1[6].state = Show_network_stats ? 1 : 0;
+				bottom_pal_refresh();
+				break;
+			case D1_MCP_CLOSE:
+				s_d1_pal_mode = 0;
+				bottom_pal_close();
+				bottom_menu_reset();
+				bottom_save_reset();
+				bottom_rec_reset();
+				bottom_hud_reset();
+				bottom_gyro_reset();
+				bottom_pri_reset();
+				bottom_sec_reset();
+				bottom_sys_reset();
+				break;
+		}
+		return 1;
+	}
+	return 0;
+}
+
+/* Jukebox Music Touch Remote Palette (3DS) */
+enum {
+	JUK_CMD_PREV = 1,
+	JUK_CMD_PLAY_PAUSE,
+	JUK_CMD_NEXT,
+	JUK_CMD_RESET_LEVEL,
+	JUK_CMD_CLOSE
+};
+
+static bs_pal_key_t s_juk_keys[] = {
+	{ "|<< PREV",   JUK_CMD_PREV,        0 },
+	{ "PLAY/PAUSE", JUK_CMD_PLAY_PAUSE,  0 },
+	{ "NEXT >>|",   JUK_CMD_NEXT,        0 },
+	{ "LEVEL SONG", JUK_CMD_RESET_LEVEL, 0 },
+	{ "CLOSE",      JUK_CMD_CLOSE,       0 }
+};
+
+static void bottom_jukebox_open(void)
+{
+	s_d1_pal_mode = 2;
+	bottom_pal_open("JUKEBOX MUSIC", s_juk_keys, 5, 2);
+}
+
+static int bottom_jukebox_poll(void)
+{
+	if (!bottom_pal_is_open())
+		return 0;
+
+	extern int songs_play_level_song(int levelnum, int offset);
+	extern void songs_pause_resume(void);
+
+	int cmd = bottom_pal_poll();
+	if (cmd) {
+		switch (cmd) {
+			case JUK_CMD_PREV:
+				songs_play_level_song(Current_level_num, -1);
+				HUD_init_message_literal(HM_DEFAULT, "Jukebox: Previous Track");
+				break;
+			case JUK_CMD_PLAY_PAUSE:
+				songs_pause_resume();
+				HUD_init_message_literal(HM_DEFAULT, "Jukebox: Pause / Resume");
+				break;
+			case JUK_CMD_NEXT:
+				songs_play_level_song(Current_level_num, 1);
+				HUD_init_message_literal(HM_DEFAULT, "Jukebox: Next Track");
+				break;
+			case JUK_CMD_RESET_LEVEL:
+				songs_play_level_song(Current_level_num, 0);
+				HUD_init_message_literal(HM_DEFAULT, "Jukebox: Level Track");
+				break;
+			case JUK_CMD_CLOSE:
+				s_d1_pal_mode = 0;
+				bottom_pal_close();
+				bottom_menu_reset();
+				bottom_save_reset();
+				bottom_rec_reset();
+				bottom_hud_reset();
+				bottom_gyro_reset();
+				bottom_pri_reset();
+				bottom_sec_reset();
+				bottom_sys_reset();
+				break;
+		}
+		return 1;
+	}
+	return 0;
+}
 #endif
 
 // Event handler for the game
@@ -1189,10 +1351,15 @@ int game_handler(window *wind, d_event *event, void *data)
 		
 			reset_cockpit();
 #ifdef __3DS__
-			/* Fresh draw of the persistent in-game MENU + SAVE buttons. */
+			/* Fresh draw of the persistent in-game bottom buttons. */
 			bottom_menu_reset();
 			bottom_save_reset();
 			bottom_rec_reset();
+			bottom_hud_reset();
+			bottom_gyro_reset();
+			bottom_pri_reset();
+			bottom_sec_reset();
+			bottom_sys_reset();
 #endif
 			break;
 
@@ -1325,12 +1492,19 @@ int game_handler(window *wind, d_event *event, void *data)
 			bs_was_observer = 0;
 		}
 #endif
+		if (bottom_pal_is_open()) {
+			if (s_d1_pal_mode == 1 && bottom_d1_comms_poll())
+				return 1;
+			if (s_d1_pal_mode == 2 && bottom_jukebox_poll())
+				return 1;
+		}
+
 		if (bottom_menu_tapped()) {
-			{
+			if (bottom_pal_is_open()) {
+				bottom_pal_close();
+				s_d1_pal_mode = 0;
 			}
 			DoMenu();
-			{
-			}
 			/* Blank the in-game buttons while the main menu overlay is up.
 			 * The game redraws them on resume via game_leave_menus(). */
 			bottom_menu_reset();
@@ -1340,6 +1514,7 @@ int game_handler(window *wind, d_event *event, void *data)
 			bottom_gyro_reset();
 			bottom_pri_reset();
 			bottom_sec_reset();
+			bottom_sys_reset();
 			bottom_clear(0);
 			return 1;
 		}
@@ -1403,6 +1578,14 @@ int game_handler(window *wind, d_event *event, void *data)
 				CycleSecondary();
 				return 1;
 			}
+			/* Top-row COMMS (multiplayer) / MUSIC Jukebox (single-player) button */
+			if (bottom_sys_tapped((Game_mode & GM_MULTI) ? 1 : 0)) {
+				if (Game_mode & GM_MULTI)
+					bottom_d1_comms_open();
+				else
+					bottom_jukebox_open();
+				return 1;
+			}
 #endif
 			return ReadControls(event);
 
@@ -1456,9 +1639,18 @@ int game_handler(window *wind, d_event *event, void *data)
 #ifdef __3DS__
 			/* Clear the persistent in-game bottom buttons so none of them
 			 * (MENU/SAVE/REC) linger on the main menu. */
+			if (bottom_pal_is_open()) {
+				bottom_pal_close();
+				s_d1_pal_mode = 0;
+			}
 			bottom_menu_reset();
 			bottom_save_reset();
 			bottom_rec_reset();
+			bottom_hud_reset();
+			bottom_gyro_reset();
+			bottom_pri_reset();
+			bottom_sec_reset();
+			bottom_sys_reset();
 			bottom_clear(0);
 			bottom_screen_present();
 #endif

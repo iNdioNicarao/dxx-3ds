@@ -1369,6 +1369,31 @@ void bottom_sec_reset(void)
 	g_sec_btn_prev = 0;
 }
 
+/* Top-row System/Comms/Music button (SYS/COMMS/MUSIC at x=232, w=80). */
+static int g_top_sys_btn_prev = 0;
+static int g_top_sys_btn_state = -1;
+static int g_top_sys_btn_bbox[4] = {-1,-1,-1,-1};
+#define TOP_SYS_BX 232, TOP_BY, 80, TOP_BH
+int bottom_sys_tapped(int is_multi)
+{
+	int desired = is_multi ? 2 : 1;
+	if (g_top_sys_btn_state != desired) {
+		g_top_sys_btn_state = desired;
+		draw_key(TOP_SYS_BX, BTN_BLUE, is_multi ? "COMMS" : "MUSIC", g_top_sys_btn_bbox);
+	}
+	touchPosition t;
+	hidTouchRead(&t);
+	int held = (hidKeysHeld() & KEY_TOUCH) && bottom_hit(TOP_SYS_BX, &t);
+	int tapped = held && !g_top_sys_btn_prev;
+	g_top_sys_btn_prev = held;
+	return tapped ? 1 : 0;
+}
+void bottom_sys_reset(void)
+{
+	g_top_sys_btn_state = -1;
+	g_top_sys_btn_prev = 0;
+}
+
 /* =========================================================================
  * VCR Demo Playback Touch Controller (3DS)
  * ========================================================================= */
@@ -1650,6 +1675,8 @@ static inline int bottom_direct_ip_tapped(void) { return 0; }
 static inline void bottom_direct_ip_reset(void) {}
 static inline int bottom_direct_connect_tapped(void) { return 0; }
 static inline void bottom_direct_connect_reset(void) {}
+static inline int bottom_sys_tapped(int m) { (void)m; return 0; }
+static inline void bottom_sys_reset(void) {}
 static inline void bottom_vcr_init(void) {}
 static inline void bottom_vcr_draw(int p, int s) { (void)p; (void)s; }
 static inline int bottom_vcr_poll(void) { return 0; }
