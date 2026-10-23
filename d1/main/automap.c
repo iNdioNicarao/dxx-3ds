@@ -23,6 +23,9 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <math.h>
 
 #include "dxxerror.h"
+#ifdef __3DS__
+#include "bottom_screen.h"	/* touch palette (must precede key.h: libctru KEY_A clash) */
+#endif
 #include "3d.h"
 #include "inferno.h"
 #include "u_mem.h"
@@ -412,6 +415,33 @@ extern int set_segment_depths(int start_seg, ubyte *segbuf);
 
 #define MAP_BACKGROUND_FILENAME (((SWIDTH>=640&&SHEIGHT>=480) && PHYSFSX_exists("maph.pcx",1))?"MAPH.PCX":"MAP.PCX")
 
+/* View-distance (segment depth) step shared by F9/F10 and the 3DS touch palette. */
+static void automap_step_depth(automap *am, int dir)
+{
+	if (dir < 0 && am->segment_limit > 1) {
+		am->segment_limit--;
+		adjust_segment_limit(am, am->segment_limit);
+	} else if (dir > 0 && am->segment_limit < am->max_segments_away) {
+		am->segment_limit++;
+		adjust_segment_limit(am, am->segment_limit);
+	}
+}
+
+/* Reset the map camera onto the player (fire-primary in the PC controls). */
+static void automap_recenter(automap *am)
+{
+	if (PlayerCfg.AutomapFreeFlight) {
+		am->viewMatrix = Objects[Players[Player_num].objnum].orient;
+		vm_vec_scale_add(&am->view_position, &Objects[Players[Player_num].objnum].pos, &am->viewMatrix.fvec, -ZOOM_DEFAULT );
+	} else {
+		am->viewDist = ZOOM_DEFAULT;
+		am->tangles.p = PITCH_DEFAULT;
+		am->tangles.h  = 0;
+		am->tangles.b  = 0;
+		am->view_target = Objects[Players[Player_num].objnum].pos;
+	}
+}
+
 int automap_key_command(window *wind, d_event *event, automap *am)
 {
 	int c = event_key_get(event);
@@ -455,16 +485,10 @@ int automap_key_command(window *wind, d_event *event, automap *am)
 #endif
 			
 		case KEY_F9:
-			if (am->segment_limit > 1) 		{
-				am->segment_limit--;
-				adjust_segment_limit(am, am->segment_limit);
-			}
+			automap_step_depth(am, -1);
 			return 1;
 		case KEY_F10:
-			if (am->segment_limit < am->max_segments_away) 	{
-				am->segment_limit++;
-				adjust_segment_limit(am, am->segment_limit);
-			}
+			automap_step_depth(am, 1);
 			return 1;
 	}
 	
@@ -503,8 +527,7 @@ int automap_process_input(window *wind, d_event *event, automap *am)
 		if ( am->controls.fire_primary_count > 0)
 		{
 			// Reset orientation
-			am->viewMatrix = Objects[Players[Player_num].objnum].orient;
-			vm_vec_scale_add(&am->view_position, &Objects[Players[Player_num].objnum].pos, &am->viewMatrix.fvec, -ZOOM_DEFAULT );
+			automap_recenter(am);
 			am->controls.fire_primary_count = 0;
 		}
 		
@@ -543,11 +566,7 @@ int automap_process_input(window *wind, d_event *event, automap *am)
 		if ( am->controls.fire_primary_count > 0)
 		{
 			// Reset orientation
-			am->viewDist = ZOOM_DEFAULT;
-			am->tangles.p = PITCH_DEFAULT;
-			am->tangles.h  = 0;
-			am->tangles.b  = 0;
-			am->view_target = Objects[Players[Player_num].objnum].pos;
+			automap_recenter(am);
 			am->controls.fire_primary_count = 0;
 		}
 
@@ -582,6 +601,54 @@ int automap_process_input(window *wind, d_event *event, automap *am)
 	return 0;
 }
 
+#ifdef __3DS__
+/* Touch palette shown on the bottom screen only while the automap is open:
+ * the PC keys for these (F9/F10 depth, move keys, fire = recenter, marker
+ * select/delete) have no 3DS button. */
+enum { AMP_DEPTH_DEC = 1, AMP_DEPTH_INC, AMP_ZOOM_IN, AMP_ZOOM_OUT,
+       AMP_RECENTER, AMP_MARKER_NEXT, AMP_MARKER_DEL, AMP_CLOSE };
+static bs_pal_key_t automap_pal_keys[] = {
+	{ "DEPTH -",  AMP_DEPTH_DEC, 0 },
+	{ "DEPTH +",  AMP_DEPTH_INC, 0 },
+	{ "ZOOM IN",  AMP_ZOOM_IN,   0 },
+	{ "ZOOM OUT", AMP_ZOOM_OUT,  0 },
+	{ "RECENTER",  AMP_RECENTER,  0 },
+	{ "CLOSE MAP", AMP_CLOSE,    0 },
+};
+
+static void automap_palette_open(void)
+{
+	if (!bottom_pal_is_open())
+		bottom_pal_open("AUTOMAP", automap_pal_keys, sizeof(automap_pal_keys)/sizeof(automap_pal_keys[0]), 2);
+}
+
+/* Returns 1 if a key closed the automap window. */
+static int automap_palette_poll(window *wind, automap *am)
+{
+	int id = bottom_pal_poll();
+	switch (id)
+	{
+		case AMP_DEPTH_DEC: automap_step_depth(am, -1); break;
+		case AMP_DEPTH_INC: automap_step_depth(am, 1); break;
+		case AMP_ZOOM_IN:
+		case AMP_ZOOM_OUT: {
+			fix step = (id == AMP_ZOOM_IN) ? -i2f(60) : i2f(60);
+			if (PlayerCfg.AutomapFreeFlight)
+				vm_vec_scale_add2(&am->view_position, &am->viewMatrix.fvec, -step);
+			else
+				am->viewDist += step;
+			break;
+		}
+		case AMP_RECENTER: automap_recenter(am); break;
+		case AMP_CLOSE:
+			window_close(wind);
+			stereo_resume();
+			return 1;
+	}
+	return 0;
+}
+#endif
+
 int automap_handler(window *wind, d_event *event, automap *am)
 {
 	switch (event->type)
@@ -590,6 +657,9 @@ int automap_handler(window *wind, d_event *event, automap *am)
 			game_flush_inputs();
 			event_toggle_focus(1);
 			key_toggle_repeat(0);
+#ifdef __3DS__
+			automap_palette_open();
+#endif
 			break;
 
 		case EVENT_WINDOW_DEACTIVATED:
@@ -598,6 +668,11 @@ int automap_handler(window *wind, d_event *event, automap *am)
 			break;
 
 		case EVENT_IDLE:
+#ifdef __3DS__
+			if (automap_palette_poll(wind, am))
+				return 1;
+#endif
+			/* fall through */
 		case EVENT_JOYSTICK_BUTTON_UP:
 		case EVENT_JOYSTICK_BUTTON_DOWN:
 		case EVENT_JOYSTICK_MOVED:
@@ -620,6 +695,9 @@ int automap_handler(window *wind, d_event *event, automap *am)
 			break;
 			
 		case EVENT_WINDOW_CLOSE:
+#ifdef __3DS__
+			bottom_pal_close();
+#endif
 			if (!am->pause_game)
 				ConsoleObject->mtype.phys_info.flags |= am->old_wiggle;		// Restore wiggle
 			event_toggle_focus(0);
