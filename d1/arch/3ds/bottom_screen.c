@@ -1425,6 +1425,7 @@ void bottom_vcr_draw(int percent_done, int vcr_state)
 	if (!g_vcr_drawn) {
 		g_vcr_drawn = 1;
 		bottom_clear(0x0000);
+		bottom_fill_marble();   /* paint the slab first or draw_key would wipe the title */
 		bottom_print(72, 8, "VCR DEMO CONTROLLER", 0x07FF /* CYAN */);
 
 		size_t i;
