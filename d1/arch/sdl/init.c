@@ -45,12 +45,25 @@ int get_pending_sleep_pause(void)
  * here broke game-start stereo and triggered a joystick-teardown crash. */
 static void d1x_apt_hook(APT_HookType type, void *param)
 {
-	if (type == APTHOOK_ONSUSPEND || type == APTHOOK_ONEXIT) {
+	if (type == APTHOOK_ONEXIT) {
 		d1x_powering_off = 1;
 		songs_pause();
+#if defined(USE_UDP) && defined(__3DS__)
+		extern void net_udp_close(void);
+		net_udp_close();
+		SOCU_ShutdownSockets();
+#endif
+	} else if (type == APTHOOK_ONSUSPEND || type == APTHOOK_ONSLEEP) {
+		songs_pause();
+#if defined(USE_UDP) && defined(__3DS__)
+		extern void net_udp_close(void);
+		net_udp_close();
+		SOCU_ShutdownSockets();
+#endif
 	} else if (type == APTHOOK_ONRESTORE || type == APTHOOK_ONWAKEUP) {
 		d1x_powering_off = 0;
 		pending_sleep_pause = 1;
+		songs_resume();
 		/* 3DS: sleep/wake (lid close/open) loses GPU/display state. If the 3D
 		 * slider was up at sleep, stereo_hw_on is stale == 1, so the next live
 		 * frame skips re-issuing gfxSet3D/pglSetStereo and both screens stay

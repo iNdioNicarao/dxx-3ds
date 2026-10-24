@@ -555,7 +555,10 @@ int main(int argc, char *argv[])
 	if (!GameArg.SndNoSound)
 		digi_close();
 	pglSetPoweredOff();
-	return 0;   /* libctru appExit -> gfxExit on live display = clean exit */
+	extern void pglExit(void);
+	pglExit();
+	gfxExit();
+	return 0;   /* clean shutdown of audio, GPU queue, GSP thread, and libctru */
 #else
 	// Tidy up - avoids a crash on exit
 	{
