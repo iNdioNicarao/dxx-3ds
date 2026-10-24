@@ -1136,38 +1136,54 @@ static int s_d1_pal_mode = 0; /* 0: none, 1: comms, 2: jukebox */
 
 enum {
 	D1_MCP_CHAT = 1,
+	D1_MCP_ACCEPT,
 	D1_MCP_TAUNT1,
 	D1_MCP_TAUNT2,
 	D1_MCP_TAUNT3,
 	D1_MCP_TAUNT4,
 	D1_MCP_NAMES,
 	D1_MCP_NET_STATS,
+	D1_MCP_REFUSE,
 	D1_MCP_CLOSE
 };
 
 static bs_pal_key_t s_mcp_keys_d1[] = {
 	{ "CHAT (OSK)",   D1_MCP_CHAT,      0 },
+	{ "ACCEPT (F6)",  D1_MCP_ACCEPT,    2 },
 	{ "TAUNT 1",      D1_MCP_TAUNT1,    0 },
 	{ "TAUNT 2",      D1_MCP_TAUNT2,    0 },
 	{ "TAUNT 3",      D1_MCP_TAUNT3,    0 },
 	{ "TAUNT 4",      D1_MCP_TAUNT4,    0 },
 	{ "NAMES",        D1_MCP_NAMES,     0 },
 	{ "NET STATS",    D1_MCP_NET_STATS, 0 },
+	{ "REFUSE",       D1_MCP_REFUSE,    2 },
 	{ "CLOSE",        D1_MCP_CLOSE,     0 }
 };
 
 static void bottom_d1_comms_open(void)
 {
 	s_d1_pal_mode = 1;
-	s_mcp_keys_d1[5].state = Show_reticle_name ? 1 : 0;
-	s_mcp_keys_d1[6].state = Show_network_stats ? 1 : 0;
-	bottom_pal_open("MULTIPLAYER COMMS", s_mcp_keys_d1, 8, 2);
+	int can_accept = (Netgame.RefusePlayers && WaitForRefuseAnswer);
+	s_mcp_keys_d1[1].state = can_accept ? 1 : 2;
+	s_mcp_keys_d1[6].state = Show_reticle_name ? 1 : 0;
+	s_mcp_keys_d1[7].state = Show_network_stats ? 1 : 0;
+	s_mcp_keys_d1[8].state = can_accept ? 0 : 2;
+	bottom_pal_open("MULTIPLAYER COMMS", s_mcp_keys_d1, 10, 2);
 }
 
 static int bottom_d1_comms_poll(void)
 {
 	if (!bottom_pal_is_open())
 		return 0;
+
+	int can_accept = (Netgame.RefusePlayers && WaitForRefuseAnswer);
+	int accept_state = can_accept ? 1 : 2;
+	int refuse_state = can_accept ? 0 : 2;
+	if (s_mcp_keys_d1[1].state != accept_state || s_mcp_keys_d1[8].state != refuse_state) {
+		s_mcp_keys_d1[1].state = accept_state;
+		s_mcp_keys_d1[8].state = refuse_state;
+		bottom_pal_refresh();
+	}
 
 	extern void multi_message_feedback(void);
 	int cmd = bottom_pal_poll();
@@ -1188,6 +1204,38 @@ static int bottom_d1_comms_poll(void)
 				bottom_pal_refresh();
 				break;
 			}
+			case D1_MCP_ACCEPT:
+				if (Netgame.RefusePlayers && WaitForRefuseAnswer) {
+					RefuseThisPlayer = 1;
+					if (Game_mode & GM_TEAM) {
+						int t1_count = 0, t2_count = 0;
+						for (int i = 0; i < N_players; i++) {
+							if (Players[i].connected) {
+								if (Netgame.team_vector & (1 << i)) t2_count++;
+								else t1_count++;
+							}
+						}
+						RefuseTeam = (t2_count < t1_count) ? 2 : 1;
+						HUD_init_message(HM_MULTI, "Player accepted to Team %d!", RefuseTeam);
+					} else {
+						HUD_init_message_literal(HM_MULTI, "Player accepted!");
+					}
+					s_mcp_keys_d1[1].state = 2;
+					s_mcp_keys_d1[8].state = 2;
+					bottom_pal_refresh();
+				}
+				break;
+			case D1_MCP_REFUSE:
+				if (Netgame.RefusePlayers && WaitForRefuseAnswer) {
+					RefuseTimeLimit = 0;
+					RefuseThisPlayer = 0;
+					WaitForRefuseAnswer = 0;
+					HUD_init_message_literal(HM_MULTI, "Player join refused.");
+					s_mcp_keys_d1[1].state = 2;
+					s_mcp_keys_d1[8].state = 2;
+					bottom_pal_refresh();
+				}
+				break;
 			case D1_MCP_TAUNT1:
 			case D1_MCP_TAUNT2:
 			case D1_MCP_TAUNT3:
@@ -1197,13 +1245,13 @@ static int bottom_d1_comms_poll(void)
 			case D1_MCP_NAMES:
 				Show_reticle_name = !Show_reticle_name;
 				HUD_init_message(HM_MULTI, "Target callsigns: %s", Show_reticle_name ? "ON" : "OFF");
-				s_mcp_keys_d1[5].state = Show_reticle_name ? 1 : 0;
+				s_mcp_keys_d1[6].state = Show_reticle_name ? 1 : 0;
 				bottom_pal_refresh();
 				break;
 			case D1_MCP_NET_STATS:
 				Show_network_stats = !Show_network_stats;
 				HUD_init_message(HM_MULTI, "Network stats: %s", Show_network_stats ? "ON" : "OFF");
-				s_mcp_keys_d1[6].state = Show_network_stats ? 1 : 0;
+				s_mcp_keys_d1[7].state = Show_network_stats ? 1 : 0;
 				bottom_pal_refresh();
 				break;
 			case D1_MCP_CLOSE:

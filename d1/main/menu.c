@@ -1132,10 +1132,11 @@ int options_menuset(newmenu *menu, d_event *event, void *userdata)
 			{
 				case  0: do_sound_menu();		break;
 				case  2: input_config();		break;
-				case  4: graphics_config();		break;
-				case  6: ReorderPrimary();		break;
-				case  7: ReorderSecondary();		break;
-				case  8: do_misc_menu();		break;
+				case  3: if (Game_mode & GM_MULTI) show_netgame_help(); else show_help(); break;
+				case  5: graphics_config();		break;
+				case  7: ReorderPrimary();		break;
+				case  8: ReorderSecondary();		break;
+				case  9: do_misc_menu();		break;
 			}
 			return 1;	// stay in menu until escape
 			break;
@@ -1979,22 +1980,23 @@ void do_options_menu()
 {
 	newmenu_item *m;
 
-	MALLOC(m, newmenu_item, 9);
+	MALLOC(m, newmenu_item, 10);
 	if (!m)
 		return;
 
 	m[ 0].type = NM_TYPE_MENU;   m[ 0].text="Sound effects & music...";
 	m[ 1].type = NM_TYPE_TEXT;   m[ 1].text="";
 	m[ 2].type = NM_TYPE_MENU;   m[ 2].text=TXT_CONTROLS_;
-	m[ 3].type = NM_TYPE_TEXT;   m[ 3].text="";
-	m[ 4].type = NM_TYPE_MENU;   m[ 4].text="Graphics Options...";
-	m[ 5].type = NM_TYPE_TEXT;   m[ 5].text="";
-	m[ 6].type = NM_TYPE_MENU;   m[ 6].text="Primary autoselect ordering...";
-	m[ 7].type = NM_TYPE_MENU;   m[ 7].text="Secondary autoselect ordering...";
-	m[ 8].type = NM_TYPE_MENU;   m[ 8].text="Misc Options...";
+	m[ 3].type = NM_TYPE_MENU;   m[ 3].text="Help & Controls Reference...";
+	m[ 4].type = NM_TYPE_TEXT;   m[ 4].text="";
+	m[ 5].type = NM_TYPE_MENU;   m[ 5].text="Graphics Options...";
+	m[ 6].type = NM_TYPE_TEXT;   m[ 6].text="";
+	m[ 7].type = NM_TYPE_MENU;   m[ 7].text="Primary autoselect ordering...";
+	m[ 8].type = NM_TYPE_MENU;   m[ 8].text="Secondary autoselect ordering...";
+	m[ 9].type = NM_TYPE_MENU;   m[ 9].text="Misc Options...";
 
 	// Fall back to main event loop
-	newmenu_do3( NULL, TXT_OPTIONS, 9, m, options_menuset, NULL, 0, NULL );
+	newmenu_do3( NULL, TXT_OPTIONS, 10, m, options_menuset, NULL, 0, NULL );
 }
 
 #ifndef RELEASE
