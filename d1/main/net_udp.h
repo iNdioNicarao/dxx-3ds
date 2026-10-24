@@ -36,6 +36,10 @@ void net_udp_send_mdata_direct(ubyte *data, int data_len, int pnum, int priority
 #define TRACKER_PORT_DEFAULT 42420
 #endif
 #define UDP_REQ_ID "D1XR" // ID string for a request packet
+// Network handshake protocol version decoupled from 3DS release version (interoperable with PC DXX-Rebirth v0.61.0)
+#define DXX_NET_VERSION_MAJOR 0
+#define DXX_NET_VERSION_MINOR 61
+#define DXX_NET_VERSION_MICRO 0
 #define UDP_MAX_NETGAMES 900
 #define UDP_NETGAMES_PPAGE 12 // Netgames on one page of Netlist
 #define UDP_NETGAMES_PAGES 75 // Pages available on Netlist (UDP_MAX_NETGAMES/UDP_NETGAMES_PPAGE)
@@ -76,10 +80,8 @@ void net_udp_send_mdata_direct(ubyte *data, int data_len, int pnum, int priority
 #define UPID_MDATA_ACK				 19 // ACK packet for UPID_MDATA_P1.
 #define UPID_MAX_SIZE			       1024 // Max size for a packet
 #define UPID_MDATA_BUF_SIZE			454
-#ifdef USE_TRACKER
-#  define UPID_TRACKER_VERIFY			 21 // The tracker has successfully gotten a hold of us
-#  define UPID_TRACKER_INCGAME			 22 // The tracker is sending us some game info
-#endif
+#define UPID_TRACKER_VERIFY			 21 // The tracker has successfully gotten a hold of us
+#define UPID_TRACKER_INCGAME			 22 // The tracker is sending us some game info
 
 #define UPID_P2P_PING	25
 #define UPID_P2P_PING_SIZE	(1 + 4 + 1 + 8 + 1 + 1) // pid, player_from, time sent, force_direct, detected loss %

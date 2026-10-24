@@ -62,8 +62,8 @@ extern uint64_t svcGetSystemTick(void);
 #endif
 extern int bench_world_acc;
 extern int benchmark_active;
-int g_segs_rendered = 0;   // diagnostic: segments drawn by last render_mine()
 #endif
+int g_segs_rendered = 0;   // diagnostic: segments drawn by last render_mine()
 
 #include "effects.h"
 
